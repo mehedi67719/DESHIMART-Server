@@ -28,57 +28,28 @@ async function run() {
     try {
         await client.connect();
 
+
+
         const db = client.db("deshimart");
         const productscollection = db.collection("products")
 
 
 
-        app.get("/products", async (req, res) => {
-            try {
-                const limit = 8;
-                const cursor = req.query.cursor;
-                const category = req.query.category;
+        const productsrouter=require("./routes/Products")
+        const categoryrouter=require("./routes/category")
 
-                let query = {};
 
-                if (category) {
-                    query.category = category;
-                }
-
-                if (cursor) {
-                    query._id = { $gt: new ObjectId(cursor) }; // <-- important fix
-                }
-
-                const products = await productscollection
-                    .find(query)
-                    .sort({ _id: 1 })
-                    .limit(limit)
-                    .toArray();
-
-                res.send(products);
-            } catch (err) {
-                console.error(err);
-                res.status(500).send({ message: "Error fetching products" });
-            }
-        });
+        app.use("/products",productsrouter(productscollection))
+        app.use("/categorys",categoryrouter(productscollection))
 
 
 
-        app.get("/categorys", async (req, res) => {
-            try {
-                const category = await productscollection.aggregate([
-                    { $group: { _id: "$category" } },
-                    { $project: { _id: 0, category:"$_id"} }
-                ]).toArray()
-              
 
-                res.send(category)
-            }
-            catch (err) {
-                console.log(err)
-                res.status(500).send({ message: "Failed to fetch Category" })
-            }
-        })
+
+
+
+
+
 
 
 
