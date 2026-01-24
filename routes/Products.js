@@ -1,3 +1,4 @@
+const e = require('express');
 const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
@@ -12,6 +13,8 @@ module.exports = (productscollection) => {
             const limit = 8;
             const cursor = req.query.cursor;
             const category = req.query.category;
+            const brand = req.query.brand;
+            const priceRange = req.query.priceRange;
 
             let query = {};
 
@@ -19,12 +22,36 @@ module.exports = (productscollection) => {
                 query.category = category;
             }
 
-            if (cursor) {
-                query._id = { $gt: new ObjectId(cursor) }; 
+            if (brand) {
+                query.brand = brand;
             }
 
+            if (priceRange) {
+                const [min, max] = priceRange.split(",").map(Number);
+                query.price = { $gte: min, $lte: max };
+            }
+
+
+
+            if (cursor) {
+                query._id = { $gt: new ObjectId(cursor) };
+            }
+
+
             const products = await productscollection
-                .find(query)
+                .find(query, {
+                    projection: {
+                        name: 1,
+                        price: 1,
+                        oldPrice: 1,
+                        image: 1,
+                        isNew: 1,
+                        sold: 1,
+                        rating: 1,
+                        discount: 1
+                    }
+                }
+                )
                 .sort({ _id: 1 })
                 .limit(limit)
                 .toArray();
@@ -35,6 +62,22 @@ module.exports = (productscollection) => {
             res.status(500).send({ message: "Error fetching products" });
         }
     });
+
+
+    router.get("/:id", async (req, res) => {
+        try {
+            const id = req.params.id;
+
+          
+            const product = await productscollection.find({ _id: new ObjectId(id) }).toArray();
+            res.send(product)
+        }
+        catch(err){
+            console.log(err)
+            res.status(500).send({message:"Failed to fetch singleproducts"})
+        }
+    })
+
 
 
 

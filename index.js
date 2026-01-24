@@ -37,10 +37,12 @@ async function run() {
 
         const productsrouter=require("./routes/Products")
         const categoryrouter=require("./routes/category")
+        const brandrouter=require("./routes/brands")
 
 
         app.use("/products",productsrouter(productscollection))
         app.use("/categorys",categoryrouter(productscollection))
+        app.use("/brands",brandrouter(productscollection))
 
 
 
