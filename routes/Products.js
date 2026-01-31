@@ -64,19 +64,66 @@ module.exports = (productscollection) => {
     });
 
 
+
+
+
+
+    router.get("/hotproducts", async (req, res) => {
+        try {
+            const { cursor } = req.query;
+            let query = {
+                discount: { $gte: 15 }
+            };
+
+
+
+
+
+            if (cursor) {
+                query._id = { $lt: new ObjectId(cursor) }
+            }
+
+
+            const result = await productscollection
+                .find(query)
+                .sort({ _id: -1 })
+                .limit(10)
+                .toArray();
+
+
+            res.send(result)
+
+
+
+        }
+        catch (err) {
+            console.log(err)
+            res.status(500).send({ error: "Server Error" })
+        }
+    })
+
+
+
+
     router.get("/:id", async (req, res) => {
         try {
             const id = req.params.id;
 
-          
+
             const product = await productscollection.find({ _id: new ObjectId(id) }).toArray();
             res.send(product)
         }
-        catch(err){
+        catch (err) {
             console.log(err)
-            res.status(500).send({message:"Failed to fetch singleproducts"})
+            res.status(500).send({ message: "Failed to fetch singleproducts" })
         }
     })
+
+
+
+
+
+
 
 
 
