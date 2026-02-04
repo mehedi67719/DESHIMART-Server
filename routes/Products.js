@@ -1,4 +1,3 @@
-const e = require('express');
 const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
@@ -105,6 +104,81 @@ module.exports = (productscollection) => {
 
 
 
+
+    router.get("/collection", async (req, res) => {
+        try {
+            const limit = 10;
+            const cursor = req.query.cursor;
+            const type = req.query.type;
+
+            let query = {};
+
+            if (type === "new") query.isNew = true;
+            if (type === "sale") query.isNew = false;
+            if (type === "hot") query.discount = { $gte: 15 };
+
+            if (cursor) query._id = { $gt: new ObjectId(cursor) };
+
+
+
+            const products = await productscollection.find(query, {
+                projection: {
+                    name: 1,
+                    price: 1,
+                    oldPrice: 1,
+                    image: 1,
+                    isNew: 1,
+                    sold: 1,
+                    rating: 1,
+                    discount: 1
+                }
+            })
+                .sort({ _id: 1 })
+                .limit(limit)
+                .toArray();
+
+            const nextCursor = products.length === limit
+                ? products[products.length - 1]._id
+                : null;
+
+            res.send({ products, nextCursor });
+        }
+        catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Error fetching Collection" });
+        }
+    });
+
+
+
+
+    router.post("/byIds", async (req, res) => {
+        try {
+            const { productIds } = req.body;
+
+            if (!productIds || !Array.isArray(productIds)) {
+                return res.status(400).send({ message: "Invalid product IDs" });
+            }
+
+            const objectIds = productIds.map(id => new ObjectId(id));
+
+            const products = await productscollection.find({
+                _id: { $in: objectIds }
+            }).toArray();
+
+            res.send(products);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ message: "Error fetching products" });
+        }
+    });
+
+
+
+
+
+
+
     router.get("/:id", async (req, res) => {
         try {
             const id = req.params.id;
@@ -118,6 +192,10 @@ module.exports = (productscollection) => {
             res.status(500).send({ message: "Failed to fetch singleproducts" })
         }
     })
+
+
+
+
 
 
 

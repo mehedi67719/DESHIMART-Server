@@ -32,17 +32,26 @@ async function run() {
 
         const db = client.db("deshimart");
         const productscollection = db.collection("products")
+        const Storescollection=db.collection("localstores")
+        const cartcollection=db.collection("cart")
+        const favoritecollection=db.collection("favorite")
 
 
 
         const productsrouter=require("./routes/Products")
         const categoryrouter=require("./routes/category")
         const brandrouter=require("./routes/brands")
+        const Storesrouter=require("./routes/Stores")
+        const cartrouter=require("./routes/cart")
+        const favoriterouter=require("./routes/favorite")
 
 
         app.use("/products",productsrouter(productscollection))
         app.use("/categorys",categoryrouter(productscollection))
         app.use("/brands",brandrouter(productscollection))
+        app.use("/Stores",Storesrouter(Storescollection))
+        app.use("/cart",cartrouter(cartcollection))
+        app.use("/favorite",favoriterouter(favoritecollection,productscollection))
 
 
 
