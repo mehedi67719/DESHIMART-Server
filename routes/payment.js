@@ -35,8 +35,8 @@ router.post('/init', async (req, res) => {
       currency: 'BDT',
       tran_id: tran_id,
       success_url: `http://localhost:3000/payment/payment-success/${tran_id}`,
-      fail_url: `http://localhost:5173/success`,
-      cancel_url: `http://localhost:5173/cancel`,
+      fail_url: `http://localhost:3000/payment/payment-fail/${tran_id}`,
+      cancel_url: `http://localhost:3000/payment/payment-cancel/${tran_id}`,
       ipn_url: 'http://localhost:3000/payment/ipn',
       shipping_method: 'Courier',
       product_name: 'Computer',
@@ -80,11 +80,20 @@ router.post('/init', async (req, res) => {
    router.post("/payment-success/:tran_id", async(req,res)=>{
     const { tran_id } = req.params;
     // console.log(tran_id )
-    res.redirect(`http://localhost:5173/success/?tran_id=${tran_id}`);
+    res.redirect(`http://localhost:5173/payment-success/?tran_id=${tran_id}`);
     
   
    });
 
+
+   router.post("/payment-cancel/:tran_id",async(req,res)=>{
+    res.redirect("http://localhost:5173/payment-cancel")
+   })
+
+
+   router.post("/payment-fail/:tran_id",async(req,res)=>{
+    res.redirect("http://localhost:5173/payment-fail")
+   })
 
 
 
