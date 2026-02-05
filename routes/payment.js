@@ -13,15 +13,31 @@ router.post('/init', async (req, res) => {
   try {
     const { userEmail, items, totalAmount, Name } = req.body;
 
-    // SSLCommerz data
+    const tran_id = new ObjectId().toString();
+    
+
+    await paymentcollection.insertOne({
+      tran_id: tran_id,
+      userEmail: userEmail,
+      items: items,
+      totalAmount: totalAmount,
+      customer_name: Name,
+      status: 'PENDING',
+      created_at: new Date()
+    });
+
+ 
+    const itemIds = items.map(item => item.id).join(',');
+    
+   
     const data = {
       total_amount: totalAmount,
       currency: 'BDT',
-      tran_id: new ObjectId().toString(),
-      success_url: 'http://localhost:5173/success',
-      fail_url: 'http://localhost:5173/fail',
-      cancel_url: 'http://localhost:5173/cancel',
-      ipn_url: 'http://localhost:5173/ipn',
+      tran_id: tran_id,
+      success_url: `http://localhost:3000/payment/payment-success/${tran_id}`,
+      fail_url: `http://localhost:5173/success`,
+      cancel_url: `http://localhost:5173/cancel`,
+      ipn_url: 'http://localhost:3000/payment/ipn',
       shipping_method: 'Courier',
       product_name: 'Computer',
       product_category: 'Electronic',
@@ -49,7 +65,10 @@ router.post('/init', async (req, res) => {
 
     const apiResponse = await sslcz.init(data);
 
-    res.json({ url: apiResponse.GatewayPageURL });
+    res.json({ 
+      url: apiResponse.GatewayPageURL,
+      tran_id: tran_id 
+    });
   } catch (err) {
     console.log("Payment Init Error:", err);
     res.status(500).json({ error: 'Server Error', details: err.message });
@@ -57,9 +76,14 @@ router.post('/init', async (req, res) => {
 });
 
 
-    // app.listen(port, () => {
-    //     console.log(`Example app listening at http://localhost:${port}`)
-    // })
+  
+   router.post("/payment-success/:tran_id", async(req,res)=>{
+    const { tran_id } = req.params;
+    // console.log(tran_id )
+    res.redirect(`http://localhost:5173/success/?tran_id=${tran_id}`);
+    
+  
+   });
 
 
 
