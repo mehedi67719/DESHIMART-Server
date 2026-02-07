@@ -36,6 +36,7 @@ async function run() {
         const cartcollection=db.collection("cart")
         const favoritecollection=db.collection("favorite")
         const paymentcollection=db.collection("payment")
+        const usercollection=db.collection("user")
 
 
 
@@ -46,6 +47,7 @@ async function run() {
         const cartrouter=require("./routes/cart")
         const favoriterouter=require("./routes/favorite")
         const paymentrouter=require("./routes/payment")
+        const userrouter=require("./routes/user")
 
 
         app.use("/products",productsrouter(productscollection))
@@ -55,6 +57,7 @@ async function run() {
         app.use("/cart",cartrouter(cartcollection))
         app.use("/favorite",favoriterouter(favoritecollection,productscollection))
         app.use("/payment",paymentrouter(paymentcollection))
+        app.use("/user",userrouter(usercollection))
 
 
 
