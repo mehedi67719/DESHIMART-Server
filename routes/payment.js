@@ -96,7 +96,7 @@ module.exports = (paymentcollection) => {
     const { tran_id } = req.params;
     await paymentcollection.updateOne(
       { tran_id: tran_id },
-      {$set:{ status: "CANCLE",created_at: new Date() }}
+      { $set: { status: "CANCLE", created_at: new Date() } }
     )
     res.redirect("http://localhost:5173/payment-cancel")
   })
@@ -107,7 +107,7 @@ module.exports = (paymentcollection) => {
 
     await paymentcollection.updateOne(
       { tran_id: tran_id },
-     {$set: { status: "FAIL",created_at: new Date() }}
+      { $set: { status: "FAIL", created_at: new Date() } }
     )
     res.redirect("http://localhost:5173/payment-fail")
   })
@@ -115,7 +115,32 @@ module.exports = (paymentcollection) => {
 
 
 
- 
+
+  router.get("/order", async (req, res) => {
+    try {
+      const email = req.query.email;
+      const result = await paymentcollection.find({userEmail: email, status: "SUCCESS" }).toArray();
+      res.send(result)
+    }
+    catch (err) {
+      console.log(err)
+      res.status(500).send({ message: err.message })
+    }
+  })
+
+
+
+  router.get("/history",async(req,res)=>{
+    try{
+      const email=req.query.email;
+      const result=await paymentcollection.find({userEmail:email}).toArray();
+      res.send(result)
+    }catch(err){
+      console.log(err)
+      res.status(500).send({message:err.message})
+    }
+  })
+
 
 
   return router
