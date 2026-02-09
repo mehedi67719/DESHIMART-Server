@@ -53,10 +53,10 @@ async function run() {
         app.use("/products",productsrouter(productscollection))
         app.use("/categorys",categoryrouter(productscollection))
         app.use("/brands",brandrouter(productscollection))
-        app.use("/Stores",Storesrouter(Storescollection))
+        app.use("/Stores",Storesrouter(Storescollection,usercollection))
         app.use("/cart",cartrouter(cartcollection))
         app.use("/favorite",favoriterouter(favoritecollection,productscollection))
-        app.use("/payment",paymentrouter(paymentcollection))
+        app.use("/payment",paymentrouter(paymentcollection,cartcollection))
         app.use("/user",userrouter(usercollection))
 
 

@@ -8,7 +8,7 @@ const store_passwd = process.env.STORE_PASSWD
 const is_live = false
 
 
-module.exports = (paymentcollection) => {
+module.exports = (paymentcollection, cartcollection) => {
   router.post('/init', async (req, res) => {
     try {
       const { userEmail, items, totalAmount, Name } = req.body;
@@ -78,18 +78,40 @@ module.exports = (paymentcollection) => {
 
 
   router.post("/payment-success/:tran_id", async (req, res) => {
-    const { tran_id } = req.params;
-    await paymentcollection.updateOne(
-      { tran_id: tran_id },
-      {
-        $set: {
-          status: "SUCCESS",
-          created_at: new Date()
-        }
+    try {
+      const { tran_id } = req.params;
+
+    
+      const payment = await paymentcollection.findOne({ tran_id });
+
+      if (!payment) {
+        return res.status(404).send({ message: "Payment not found" });
       }
-    )
-    res.redirect(`http://localhost:5173/payment-success/?tran_id=${tran_id}`);
+
+     
+      await paymentcollection.updateOne(
+        { tran_id },
+        {
+          $set: {
+            status: "SUCCESS",
+            paid_at: new Date()
+          }
+        }
+      );
+
+   
+      await cartcollection.deleteMany({ userEmail: payment.userEmail });
+
+   
+      res.redirect(`http://localhost:5173/payment-success?tran_id=${tran_id}`);
+
+    } catch (err) {
+      console.log("Payment Success Error:", err);
+      res.status(500).send({ message: err.message });
+    }
   });
+
+
 
 
   router.post("/payment-cancel/:tran_id", async (req, res) => {
@@ -119,7 +141,7 @@ module.exports = (paymentcollection) => {
   router.get("/order", async (req, res) => {
     try {
       const email = req.query.email;
-      const result = await paymentcollection.find({userEmail: email, status: "SUCCESS" }).toArray();
+      const result = await paymentcollection.find({ userEmail: email, status: "SUCCESS" }).toArray();
       res.send(result)
     }
     catch (err) {
@@ -130,14 +152,14 @@ module.exports = (paymentcollection) => {
 
 
 
-  router.get("/history",async(req,res)=>{
-    try{
-      const email=req.query.email;
-      const result=await paymentcollection.find({userEmail:email}).toArray();
+  router.get("/history", async (req, res) => {
+    try {
+      const email = req.query.email;
+      const result = await paymentcollection.find({ userEmail: email }).toArray();
       res.send(result)
-    }catch(err){
+    } catch (err) {
       console.log(err)
-      res.status(500).send({message:err.message})
+      res.status(500).send({ message: err.message })
     }
   })
 

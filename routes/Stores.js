@@ -2,7 +2,7 @@ const express = require('express');
 const { ObjectId } = require('mongodb');
 const router = express.Router();
 
-module.exports = (Storescollection) => {
+module.exports = (Storescollection, usercollection) => {
     router.get("/", async (req, res) => {
         try {
             const { cursor } = req.query;
@@ -19,7 +19,7 @@ module.exports = (Storescollection) => {
                 .limit(limit)
                 .toArray();
 
-         
+
             const response = {
                 stores: result,
                 nextCursor: result.length > 0 ? result[result.length - 1]._id : null,
@@ -34,6 +34,30 @@ module.exports = (Storescollection) => {
             });
         }
     });
+
+
+    router.post("/", async (req, res) => {
+        try {
+            const data = req.body;
+            const result = await Storescollection.insertOne(data);
+
+            await usercollection.updateOne(
+                { email: data.email },
+                {
+                    $set: {
+                        role: "seller",
+                    },
+                }
+            );
+
+            res.send(result);
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ message: err.message });
+        }
+    });
+
+
 
     return router;
 };
