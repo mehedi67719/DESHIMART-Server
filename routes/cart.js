@@ -4,9 +4,24 @@ const router = express.Router();
 
 
 
-module.exports = (cartcollection) => {
+module.exports = (cartcollection,favoritecollection) => {
 
-    router.post("/", async (req, res) => {
+    router.post("/from-favorite", async (req, res) => {
+        const cartdata = req.body
+
+        try {
+            const result = await cartcollection.insertOne(cartdata);
+            res.send(result)
+        }
+        catch (err) {
+            console.log(err)
+            res.status(500).send({ message: "Internal server error", })
+        }
+    })
+
+
+
+        router.post("/", async (req, res) => {
         const cartdata = req.body
 
         try {

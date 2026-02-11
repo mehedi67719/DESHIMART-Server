@@ -45,7 +45,7 @@ module.exports = (Storescollection, usercollection) => {
                 { email: data.email },
                 {
                     $set: {
-                        role: "seller",
+                        role: "requested-seller",
                     },
                 }
             );
