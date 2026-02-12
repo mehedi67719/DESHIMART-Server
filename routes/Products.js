@@ -7,6 +7,98 @@ const { ObjectId } = require('mongodb');
 module.exports = (productscollection) => {
 
 
+
+
+    router.get("/top-categories", async (req, res) => {
+        try {
+
+
+            const topCategories = await productscollection.aggregate([
+                {
+                    $group: {
+                        _id: "$category",
+                        totalSold: { $sum: "$sold" }
+                    }
+                },
+                { $sort: { totalSold: -1 } },
+                { $limit: 3 }
+            ]).toArray();
+
+            const categoryNames = topCategories.map(cat => cat._id);
+
+
+            const result = await Promise.all(
+                categoryNames.map(async (category) => {
+
+                    const products = await productscollection.find({ category })
+                        .sort({ sold: -1 })
+                        .limit(5)
+                        .project({
+                            name: 1,
+                            price: 1,
+                            oldPrice: 1,
+                            image: 1,
+                            isNew: 1,
+                            sold: 1,
+                            rating: 1,
+                            discount: 1
+                        })
+                        .toArray();
+
+                    return {
+                        category,
+                        products
+                    };
+                })
+            );
+
+            res.send(result);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Error fetching top categories" });
+        }
+    });
+
+
+
+
+    router.get("/top-rating", async (req, res) => {
+        try {
+
+            const products = await productscollection
+                .find(
+                    { rating: { $exists: true } }, 
+                    {
+                        projection: {
+                             name: 1,
+                            price: 1,
+                            oldPrice: 1,
+                            image: 1,
+                            isNew: 1,
+                            sold: 1,
+                            rating: 1,
+                            discount: 1,
+                            category:1
+                        }
+                    }
+                )
+                .sort({ rating: -1 }) 
+                .limit(5)
+                .toArray();
+
+            res.send(products);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Error fetching top rating products" });
+        }
+    });
+
+
+
+
+
     router.get("/", async (req, res) => {
         try {
             const limit = 8;
