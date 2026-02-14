@@ -20,6 +20,42 @@ module.exports = (productscollection) => {
         }
     })
 
+
+
+
+    router.get("/popular", async (req, res) => {
+        try {
+
+            const categories = await productscollection.aggregate([
+                {
+                    $group: {
+                        _id: "$category",
+                        totalSold: { $sum: "$sold" }
+                    }
+                },
+                {
+                    $sort: { totalSold: -1 }
+                },
+                {
+                    $limit: 8
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: "$_id",
+                        totalSold: 1
+                    }
+                }
+            ]).toArray();
+
+            res.send(categories);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Failed to fetch popular categories" });
+        }
+    });
+
     return router
 };
 

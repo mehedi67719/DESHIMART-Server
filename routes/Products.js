@@ -41,7 +41,8 @@ module.exports = (productscollection) => {
                             isNew: 1,
                             sold: 1,
                             rating: 1,
-                            discount: 1
+                            discount: 1,
+                            sellerEmail: 1
                         })
                         .toArray();
 
@@ -68,10 +69,10 @@ module.exports = (productscollection) => {
 
             const products = await productscollection
                 .find(
-                    { rating: { $exists: true } }, 
+                    { rating: { $exists: true } },
                     {
                         projection: {
-                             name: 1,
+                            name: 1,
                             price: 1,
                             oldPrice: 1,
                             image: 1,
@@ -79,11 +80,12 @@ module.exports = (productscollection) => {
                             sold: 1,
                             rating: 1,
                             discount: 1,
-                            category:1
+                            category: 1,
+                            sellerEmail: 1
                         }
                     }
                 )
-                .sort({ rating: -1 }) 
+                .sort({ rating: -1 })
                 .limit(5)
                 .toArray();
 
@@ -139,7 +141,8 @@ module.exports = (productscollection) => {
                         isNew: 1,
                         sold: 1,
                         rating: 1,
-                        discount: 1
+                        discount: 1,
+                        sellerEmail: 1
                     }
                 }
                 )
@@ -154,6 +157,110 @@ module.exports = (productscollection) => {
         }
     });
 
+
+    router.get("/my-products", async (req, res) => {
+        try {
+            const email = req.query.email;
+
+            const result = await productscollection
+                .find({ sellerEmail: email })
+                .toArray();
+
+            res.send(result);
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: err.message });
+        }
+    });
+
+
+    router.delete("/:id", async (req, res) => {
+        try {
+            const id = req.params.id;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).send({ message: "Invalid product ID" });
+            }
+
+            const result = await productscollection.deleteOne({
+                _id: new ObjectId(id)
+            });
+
+            if (result.deletedCount === 0) {
+                return res.status(404).send({ message: "Product not found" });
+            }
+
+            res.send({
+                message: "Product deleted successfully",
+                deletedCount: result.deletedCount
+            });
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: err.message });
+        }
+    });
+
+
+    router.put("/:id", async (req, res) => {
+        try {
+            const id = req.params.id;
+            const updates = req.body;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).send({ message: "Invalid product ID" });
+            }
+            delete updates._id;
+
+
+            updates.updatedAt = new Date();
+
+            const result = await productscollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: updates }
+            );
+
+            if (result.matchedCount === 0) {
+                return res.status(404).send({ message: "Product not found" });
+            }
+
+            res.send({
+                message: "Product updated successfully",
+                modifiedCount: result.modifiedCount
+            });
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: err.message });
+        }
+    });
+
+
+
+
+
+
+    router.post("/", async (req, res) => {
+        try {
+            const data = req.body;
+
+            if (!data) {
+                return res.status(400).send({ message: "Product data is required" });
+            }
+
+            const result = await productscollection.insertOne(data);
+
+            res.status(201).send({
+                success: true,
+                insertedId: result.insertedId
+            });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({
+                success: false,
+                message: "Failed to post product data"
+            });
+        }
+    });
 
 
 
@@ -222,7 +329,8 @@ module.exports = (productscollection) => {
                     isNew: 1,
                     sold: 1,
                     rating: 1,
-                    discount: 1
+                    discount: 1,
+                    sellerEmail:1
                 }
             })
                 .sort({ _id: 1 })
