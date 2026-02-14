@@ -81,14 +81,14 @@ module.exports = (paymentcollection, cartcollection) => {
     try {
       const { tran_id } = req.params;
 
-    
+
       const payment = await paymentcollection.findOne({ tran_id });
 
       if (!payment) {
         return res.status(404).send({ message: "Payment not found" });
       }
 
-     
+
       await paymentcollection.updateOne(
         { tran_id },
         {
@@ -99,10 +99,10 @@ module.exports = (paymentcollection, cartcollection) => {
         }
       );
 
-   
+
       await cartcollection.deleteMany({ userEmail: payment.userEmail });
 
-   
+
       res.redirect(`http://localhost:5173/payment-success?tran_id=${tran_id}`);
 
     } catch (err) {
@@ -162,6 +162,50 @@ module.exports = (paymentcollection, cartcollection) => {
       res.status(500).send({ message: err.message })
     }
   })
+
+
+
+
+
+  router.get('/buyer-order', async (req, res) => {
+    try {
+      const sellerEmail = req.query.sellerEmail;
+
+      // console.log(sellerEmail)
+
+      if (!sellerEmail) {
+        return res.status(400).send({ message: "Seller email is required" });
+      }
+
+  
+
+      const result = await paymentcollection.aggregate([
+        { $match: { status: "SUCCESS" } },
+        { $unwind: { path: "$items", preserveNullAndEmptyArrays: true } },
+        { $match: { "items.sellerEmail": sellerEmail } },
+        {
+          $project: {
+            _id: 0,
+            tran_id: 1,
+            customer_name: 1,
+            userEmail: 1,
+            paid_at: 1,
+            item: "$items"
+          }
+        },
+        { $sort: { paid_at: -1 } }
+      ]).toArray();
+
+      console.log("Seller orders fetched:", result.length);
+      res.send(result);
+    } catch (error) {
+      console.log("Backend Error:", error);
+      res.status(500).send({ message: "Failed to fetch seller items", error: error.message });
+    }
+  });
+
+
+
 
 
 
