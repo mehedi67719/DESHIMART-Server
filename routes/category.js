@@ -56,6 +56,91 @@ module.exports = (productscollection) => {
         }
     });
 
+
+    router.get("/seller/popular", async (req, res) => {
+        try {
+            const sellerEmail = req.query.sellerEmail;
+
+            if (!sellerEmail) {
+                return res.status(400).send({ message: "Seller email is required" });
+            }
+
+            const categories = await productscollection.aggregate([
+                {
+                    $match: { sellerEmail: sellerEmail }
+                },
+                {
+                    $group: {
+                        _id: "$category",
+                        totalSold: { $sum: "$sold" }
+                    }
+                },
+                {
+                    $sort: { totalSold: -1 }
+                },
+                {
+                    $limit: 8
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: "$_id",
+                        totalSold: 1
+                    }
+                }
+            ]).toArray();
+
+            res.send(categories);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Failed to fetch popular categories" });
+        }
+    });
+
+
+    router.get("/seller/toprating", async (req, res) => {
+        try {
+            const sellerEmail = req.query.sellerEmail;
+
+            if (!sellerEmail) {
+                return res.status(400).send({ message: "Seller email is required" });
+            }
+
+            const categories = await productscollection.aggregate([
+                {
+                    $match: { sellerEmail: sellerEmail }
+                },
+                {
+                    $group: {
+                        _id: "$category",
+                        avgRating: { $avg: "$rating" }   
+                    }
+                },
+                {
+                    $sort: { avgRating: -1 }   
+                },
+                {
+                    $limit: 8
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: "$_id",
+                        avgRating: { $round: ["$avgRating", 2] } 
+                    }
+                }
+            ]).toArray();
+
+            res.send(categories);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Failed to fetch top rating categories" });
+        }
+    });
+
+
     return router
 };
 
