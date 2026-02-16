@@ -302,6 +302,44 @@ module.exports = (productscollection) => {
 
 
 
+    router.get("/status-summary", async (req, res) => {
+        try {
+            const email = req.query.sellerEmail;
+
+            if (!email) {
+                return res.status(400).send({ message: "Email is required" });
+            }
+
+            const result = await productscollection.aggregate([
+                {
+                    $match: { sellerEmail: email }
+                },
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]).toArray();
+
+            const summary = {
+                approved: 0,
+                rejected: 0,
+                pending: 0
+            };
+
+            result.forEach(item => {
+                summary[item._id] = item.count;
+            });
+
+            res.send(summary);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Failed to fetch status summary" });
+        }
+    });
+
 
 
     router.get("/collection", async (req, res) => {
@@ -330,7 +368,7 @@ module.exports = (productscollection) => {
                     sold: 1,
                     rating: 1,
                     discount: 1,
-                    sellerEmail:1
+                    sellerEmail: 1
                 }
             })
                 .sort({ _id: 1 })
