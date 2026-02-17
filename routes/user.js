@@ -5,6 +5,18 @@ const router = express.Router();
 
 module.exports = (usercollection) => {
 
+
+    router.get('/all-users',async(req,res)=>{
+        try{
+            const result=await usercollection.find().toArray();
+            res.send(result)
+        }
+        catch(err){
+            console.log(err)
+            res.status(500).send({message:"server error"})
+        }
+    })
+
     router.post("/", async (req, res) => {
         try {
             const user = req.body;

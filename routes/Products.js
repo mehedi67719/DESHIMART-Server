@@ -12,8 +12,8 @@ module.exports = (productscollection) => {
     router.get("/top-categories", async (req, res) => {
         try {
 
-
             const topCategories = await productscollection.aggregate([
+                { $match: { status: "approved" } },
                 {
                     $group: {
                         _id: "$category",
@@ -26,11 +26,12 @@ module.exports = (productscollection) => {
 
             const categoryNames = topCategories.map(cat => cat._id);
 
-
             const result = await Promise.all(
                 categoryNames.map(async (category) => {
-
-                    const products = await productscollection.find({ category })
+                    const products = await productscollection.find({
+                        category,
+                        status: "approved"
+                    })
                         .sort({ sold: -1 })
                         .limit(5)
                         .project({
@@ -66,10 +67,12 @@ module.exports = (productscollection) => {
 
     router.get("/top-rating", async (req, res) => {
         try {
-
             const products = await productscollection
                 .find(
-                    { rating: { $exists: true } },
+                    {
+                        rating: { $exists: true },
+                        status: "approved"  
+                    },
                     {
                         projection: {
                             name: 1,
@@ -109,7 +112,7 @@ module.exports = (productscollection) => {
             const brand = req.query.brand;
             const priceRange = req.query.priceRange;
 
-            let query = {};
+            let query = { status: "approved" };
 
             if (category) {
                 query.category = category;
@@ -270,6 +273,7 @@ module.exports = (productscollection) => {
         try {
             const { cursor } = req.query;
             let query = {
+                status: "approved",
                 discount: { $gte: 15 }
             };
 
@@ -348,15 +352,18 @@ module.exports = (productscollection) => {
             const cursor = req.query.cursor;
             const type = req.query.type;
 
-            let query = {};
+
+            let query = {
+                status: "approved"
+            };
+
 
             if (type === "new") query.isNew = true;
             if (type === "sale") query.isNew = false;
             if (type === "hot") query.discount = { $gte: 15 };
 
+
             if (cursor) query._id = { $gt: new ObjectId(cursor) };
-
-
 
             const products = await productscollection.find(query, {
                 projection: {
@@ -368,7 +375,8 @@ module.exports = (productscollection) => {
                     sold: 1,
                     rating: 1,
                     discount: 1,
-                    sellerEmail: 1
+                    sellerEmail: 1,
+                    status: 1
                 }
             })
                 .sort({ _id: 1 })
@@ -380,12 +388,12 @@ module.exports = (productscollection) => {
                 : null;
 
             res.send({ products, nextCursor });
-        }
-        catch (err) {
+        } catch (err) {
             console.log(err);
             res.status(500).send({ message: "Error fetching Collection" });
         }
     });
+
 
 
 
