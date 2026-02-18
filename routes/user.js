@@ -73,6 +73,18 @@ module.exports = (usercollection) => {
     });
 
 
+    router.get("/pending-user",async(req,res)=>{
+        try{
+            const result=await usercollection.find({role:"requested-seller"}).toArray();
+            res.send(result)
+        }
+        catch(err){
+            console.log(err)
+            res.status(500).send({message:"server error"})
+        }
+    })
+
+
 
     router.get("/", async (req, res) => {
         try {
