@@ -65,13 +65,28 @@ module.exports = (productscollection) => {
 
 
 
+
+    router.get("/all-products", async (req, res) => {
+        try {
+            const result = await productscollection.find().toArray();
+            res.send(result)
+        }
+        catch (err) {
+            console.log(err)
+            res.status(500).send({ message: "server error" })
+        }
+    })
+
+
+
+
     router.get("/top-rating", async (req, res) => {
         try {
             const products = await productscollection
                 .find(
                     {
                         rating: { $exists: true },
-                        status: "approved"  
+                        status: "approved"
                     },
                     {
                         projection: {
@@ -418,6 +433,49 @@ module.exports = (productscollection) => {
             res.status(500).send({ message: "Error fetching products" });
         }
     });
+
+
+
+
+
+    router.patch("/status/:id", async (req, res) => {
+        try {
+            const id = req.params.id;
+            const { status } = req.body;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).send({ message: "Invalid product ID" });
+            }
+
+            if (!status) {
+                return res.status(400).send({ message: "Status is required" });
+            }
+
+            const result = await productscollection.updateOne(
+                { _id: new ObjectId(id) },
+                {
+                    $set: {
+                        status: status,
+                        updatedAt: new Date()
+                    }
+                }
+            );
+
+            if (result.matchedCount === 0) {
+                return res.status(404).send({ message: "Product not found" });
+            }
+
+            res.send({
+                message: "Product status updated successfully",
+                modifiedCount: result.modifiedCount
+            });
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Failed to update product status" });
+        }
+    });
+
 
 
 
