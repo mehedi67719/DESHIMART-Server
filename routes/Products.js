@@ -80,6 +80,20 @@ module.exports = (productscollection) => {
 
 
 
+    router.get("/pending-approval",async(req,res)=>{
+        try{
+            const result=await productscollection.find({status:'pending'}).toArray();
+            res.send(result)
+        }
+        catch(err){
+            console.log(err)
+            res.status(500).send({message:"server error"})
+        }
+    })
+
+
+
+
     router.get("/top-rating", async (req, res) => {
         try {
             const products = await productscollection
