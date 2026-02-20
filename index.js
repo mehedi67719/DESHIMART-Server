@@ -14,7 +14,7 @@ app.use(cors());
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "*" } 
+    cors: { origin: "*" }
 });
 
 
@@ -42,7 +42,23 @@ async function run() {
         const favoritecollection = db.collection("favorite")
         const paymentcollection = db.collection("payment")
         const usercollection = db.collection("user")
-        const chatcollection=db.collection("chat")
+        const chatcollection = db.collection("chat")
+
+
+
+
+        io.on("connection", (socket) => {
+            console.log("User connected:", socket.id);
+
+            socket.on("join-room", (chatId) => {
+                socket.join(chatId);
+                console.log("Joined room:", chatId);
+            });
+
+            socket.on("disconnect", () => {
+                console.log("User disconnected:", socket.id);
+            });
+        });
 
 
 
@@ -54,7 +70,7 @@ async function run() {
         const favoriterouter = require("./routes/favorite")
         const paymentrouter = require("./routes/payment")
         const userrouter = require("./routes/user")
-        const chatrouter=require("./routes/chat")
+        const chatrouter = require("./routes/chat")
 
 
         app.use("/products", productsrouter(productscollection))
@@ -65,7 +81,7 @@ async function run() {
         app.use("/favorite", favoriterouter(favoritecollection, productscollection))
         app.use("/payment", paymentrouter(paymentcollection, cartcollection))
         app.use("/user", userrouter(usercollection))
-        app.use("/chat",chatrouter(chatcollection,io,usercollection))
+        app.use("/chat", chatrouter(chatcollection, io, usercollection))
 
 
 
