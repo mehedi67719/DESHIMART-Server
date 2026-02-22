@@ -3,7 +3,23 @@ const { ObjectId } = require("mongodb");
 const router = express.Router();
 
 module.exports = (chatcollection, io, usercollection) => {
-
+    io.on('connection', (socket) => {
+        console.log('User connected:', socket.id);
+        
+        socket.on('join-chat', (chatId) => {
+            socket.join(chatId);
+            console.log(`Socket ${socket.id} joined chat ${chatId}`);
+        });
+        
+        socket.on('leave-chat', (chatId) => {
+            socket.leave(chatId);
+            console.log(`Socket ${socket.id} left chat ${chatId}`);
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('User disconnected:', socket.id);
+        });
+    });
 
     router.post("/list", async (req, res) => {
         try {
@@ -41,7 +57,6 @@ module.exports = (chatcollection, io, usercollection) => {
         }
     });
 
-
     router.get("/list", async (req, res) => {
         try {
             const userEmail = req.query.email;
@@ -62,7 +77,6 @@ module.exports = (chatcollection, io, usercollection) => {
         }
     });
 
-
     router.post("/send-message", async (req, res) => {
         try {
             const { chatId, useremail, messageText } = req.body;
@@ -78,20 +92,20 @@ module.exports = (chatcollection, io, usercollection) => {
             const chat = await chatcollection.findOne({ _id: new ObjectId(chatId) });
             if (!chat) return res.status(404).send({ message: "Chat not found" });
 
-            const receiverEmail = chat.buyerEmail === useremail ? chat.sellerEmail : chat.buyerEmail;
-
             const result = await chatcollection.updateOne(
                 { _id: new ObjectId(chatId) },
                 {
                     $push: { chat: newMessage },
                     $set: { lastMessage: messageText, lastMessageTime: new Date() },
-                    $pull: { seenBy: useremail }, 
-                    $inc: { unreadCount: 1 }     
+                    $inc: { unreadCount: 1 }
                 }
             );
 
-          
-            io.to(chatId).emit("new-message", { chatId, newMessage });
+            io.to(chatId).emit("new-message", { 
+                chatId, 
+                newMessage,
+                sender: useremail 
+            });
 
             res.send({ success: true, newMessage });
 
@@ -101,14 +115,10 @@ module.exports = (chatcollection, io, usercollection) => {
         }
     });
 
-
     router.put("/mark-seen/:chatId", async (req, res) => {
         try {
             const { chatId } = req.params;
             const { userEmail } = req.body;
-
-
-            console.log(chatId,userEmail)
 
             if (!chatId || !userEmail)
                 return res.status(400).send({ message: "ChatId and userEmail required" });
@@ -116,7 +126,6 @@ module.exports = (chatcollection, io, usercollection) => {
             const chat = await chatcollection.findOne({ _id: new ObjectId(chatId) });
             if (!chat) return res.status(404).send({ message: "Chat not found" });
 
-         
             const alreadySeen = chat.seenBy.includes(userEmail);
 
             if (!alreadySeen) {
@@ -124,11 +133,10 @@ module.exports = (chatcollection, io, usercollection) => {
                     { _id: new ObjectId(chatId) },
                     {
                         $addToSet: { seenBy: userEmail },
-                        $set: { unreadCount: 0 } 
+                        $set: { unreadCount: 0 }
                     }
                 );
 
-          
                 io.to(chatId).emit("message-seen", { chatId, userEmail });
             }
 

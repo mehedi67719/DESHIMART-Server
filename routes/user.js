@@ -17,6 +17,48 @@ module.exports = (usercollection) => {
         }
     })
 
+
+
+    router.get('/all-users-summary', async (req, res) => {
+        try {
+            const users = await usercollection.find().toArray();
+
+            const monthlySummary = {};
+            users.forEach(user => {
+                if (!user.createdAt) return;
+
+                const month = new Date(user.createdAt).toISOString().slice(0, 7);
+
+                if (!monthlySummary[month]) {
+                    monthlySummary[month] = {
+                        totalUsers: 0,
+                        totalBuyers: 0,
+                        totalSellers: 0
+                    };
+                }
+
+                monthlySummary[month].totalUsers += 1;
+                if (user.role === "buyer") {
+                    monthlySummary[month].totalBuyers += 1;
+                }
+
+                if (user.role === "admin" || user.role === "seller") {
+                    monthlySummary[month].totalSellers += 1;
+                }
+            });
+
+            res.send({
+                monthlySummary
+            });
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "server error" });
+        }
+    }); 
+
+
+
     router.post("/", async (req, res) => {
         try {
             const user = req.body;
@@ -73,14 +115,14 @@ module.exports = (usercollection) => {
     });
 
 
-    router.get("/pending-user",async(req,res)=>{
-        try{
-            const result=await usercollection.find({role:"requested-seller"}).toArray();
+    router.get("/pending-user", async (req, res) => {
+        try {
+            const result = await usercollection.find({ role: "requested-seller" }).toArray();
             res.send(result)
         }
-        catch(err){
+        catch (err) {
             console.log(err)
-            res.status(500).send({message:"server error"})
+            res.status(500).send({ message: "server error" })
         }
     })
 

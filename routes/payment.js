@@ -177,7 +177,7 @@ module.exports = (paymentcollection, cartcollection) => {
         return res.status(400).send({ message: "Seller email is required" });
       }
 
-  
+
 
       const result = await paymentcollection.aggregate([
         { $match: { status: "SUCCESS" } },
@@ -205,6 +205,44 @@ module.exports = (paymentcollection, cartcollection) => {
   });
 
 
+
+  router.get("/all-order-summary", async (req, res) => {
+    try {
+      const orders = await paymentcollection.find({ status: "SUCCESS" }).toArray();
+
+      const monthlySummary = {};
+      orders.forEach(order => {
+        if (!order.paid_at || !order.items) return;
+
+        const month = new Date(order.paid_at).toISOString().slice(0, 7);
+
+      
+        if (!monthlySummary[month]) {
+          monthlySummary[month] = {
+            totalRevenue: 0,
+            totalItems: 0
+          };
+        }
+
+  
+        monthlySummary[month].totalRevenue += order.totalAmount || 0;
+
+        const itemCount = order.items.reduce((acc, item) => {
+          return acc + (item.quantity || 0);
+        }, 0);
+
+        monthlySummary[month].totalItems += itemCount;
+      });
+
+      res.send({
+        monthlySummary
+      });
+
+    } catch (err) {
+      console.log(err);
+      res.status(500).send({ message: "server error" });
+    }
+  });
 
 
 

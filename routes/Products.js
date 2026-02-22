@@ -78,16 +78,46 @@ module.exports = (productscollection) => {
     })
 
 
+    router.get("/product-upload-summary", async (req, res) => {
+        try {
+            const products = await productscollection.find().toArray();
+
+            const monthlyUpload = {};
+
+            products.forEach(product => {
+                if (!product.createdAt) return;
+
+                const month = new Date(product.createdAt).toISOString().slice(0, 7);
+
+                if (!monthlyUpload[month]) {
+                    monthlyUpload[month] = 0;
+                }
+
+                monthlyUpload[month] += 1;
+            });
+
+            res.send({
+                monthlyUpload,
+                totalProducts: products.length
+            });
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "server error" });
+        }
+    });
 
 
-    router.get("/pending-approval",async(req,res)=>{
-        try{
-            const result=await productscollection.find({status:'pending'}).toArray();
+
+
+    router.get("/pending-approval", async (req, res) => {
+        try {
+            const result = await productscollection.find({ status: 'pending' }).toArray();
             res.send(result)
         }
-        catch(err){
+        catch (err) {
             console.log(err)
-            res.status(500).send({message:"server error"})
+            res.status(500).send({ message: "server error" })
         }
     })
 
