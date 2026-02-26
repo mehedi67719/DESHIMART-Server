@@ -216,7 +216,7 @@ module.exports = (paymentcollection, cartcollection) => {
 
         const month = new Date(order.paid_at).toISOString().slice(0, 7);
 
-      
+
         if (!monthlySummary[month]) {
           monthlySummary[month] = {
             totalRevenue: 0,
@@ -224,7 +224,7 @@ module.exports = (paymentcollection, cartcollection) => {
           };
         }
 
-  
+
         monthlySummary[month].totalRevenue += order.totalAmount || 0;
 
         const itemCount = order.items.reduce((acc, item) => {
@@ -244,6 +244,22 @@ module.exports = (paymentcollection, cartcollection) => {
     }
   });
 
+
+
+  router.get("/order-status-count", async (req, res) => {
+    try {
+      const successCount = await paymentcollection.countDocuments({ status: "SUCCESS" });
+      const pendingCount = await paymentcollection.countDocuments({ status: "CANCLE" });
+
+      res.send({
+        SUCCESS: successCount,
+        CANCLE: pendingCount
+      });
+
+    } catch (error) {
+      res.status(500).send({ message: error.message });
+    }
+  });
 
 
 

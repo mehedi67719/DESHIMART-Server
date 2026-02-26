@@ -405,6 +405,39 @@ module.exports = (productscollection) => {
 
 
 
+    router.get("/allproducts-status-summary", async (req, res) => {
+        try {
+            const result = await productscollection.aggregate([
+                {
+                    $group: {
+                        _id: "$status",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]).toArray();
+
+            const summary = {
+                approved: 0,
+                rejected: 0,
+                pending: 0
+            };
+
+            result.forEach(item => {
+                if (item._id === "approved") summary.approved = item.count;
+                if (item._id === "rejected") summary.rejected = item.count;
+                if (item._id === "pending") summary.pending = item.count;
+            });
+
+            res.send(summary);
+
+        } catch (err) {
+            console.log("Status Summary Error:", err);
+            res.status(500).send({ message: "Failed to fetch status summary" });
+        }
+    });
+
+
+
     router.get("/collection", async (req, res) => {
         try {
             const limit = 10;
