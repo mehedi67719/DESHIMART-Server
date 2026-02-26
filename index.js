@@ -71,6 +71,7 @@ async function run() {
         const paymentrouter = require("./routes/payment")
         const userrouter = require("./routes/user")
         const chatrouter = require("./routes/chat")
+        const alltotalrouter=require("./routes/altotal")
 
 
         app.use("/products", productsrouter(productscollection))
@@ -82,6 +83,7 @@ async function run() {
         app.use("/payment", paymentrouter(paymentcollection, cartcollection))
         app.use("/user", userrouter(usercollection))
         app.use("/chat", chatrouter(chatcollection, io, usercollection))
+        app.use("/all-total",alltotalrouter(productscollection,paymentcollection,usercollection))
 
 
 
