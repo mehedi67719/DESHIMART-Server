@@ -263,5 +263,47 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
+  router.get("/top-buyers", async (req, res) => {
+    try {
+      const result = await paymentcollection.aggregate([
+        {
+          $match: { status: "SUCCESS" } // শুধু successful payment
+        },
+        {
+          $group: {
+            _id: "$userEmail",
+            customerName: { $first: "$customer_name" },
+            totalOrders: { $sum: 1 },
+            totalSpent: { $sum: "$totalAmount" },
+            totalItems: {
+              $sum: {
+                $sum: {
+                  $map: {
+                    input: "$items",
+                    as: "item",
+                    in: { $ifNull: ["$$item.quantity", 1] }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          $sort: { totalOrders: -1 } 
+        },
+        {
+          $limit: 5
+        }
+      ]).toArray();
+
+      res.send(result);
+
+    } catch (err) {
+      console.log(err);
+      res.status(500).send({ message: "Failed to fetch top buyers" });
+    }
+  });
+
+
   return router
 }

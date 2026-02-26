@@ -488,6 +488,37 @@ module.exports = (productscollection) => {
 
 
 
+    router.get("/top-sellers", async (req, res) => {
+        try {
+            const result = await productscollection.aggregate([
+                {
+                    $match: { status: "approved" }  
+                },
+                {
+                    $group: {
+                        _id: "$sellerEmail",
+                        shopName: { $first: "$shopName" },
+                        totalSold: { $sum: "$sold" },
+                        totalProducts: { $sum: 1 }
+                    }
+                },
+                {
+                    $sort: { totalSold: -1 } 
+                },
+                {
+                    $limit: 5
+                }
+            ]).toArray();
+
+            res.send(result);
+
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({ message: "Failed to fetch top sellers" });
+        }
+    });
+
+
 
 
     router.post("/byIds", async (req, res) => {
