@@ -4,7 +4,8 @@ const { ObjectId } = require('mongodb');
 
 
 
-module.exports = (productscollection) => {
+
+module.exports = (productscollection, notificationcollection) => {
 
 
 
@@ -235,7 +236,6 @@ module.exports = (productscollection) => {
         }
     });
 
-
     router.delete("/:id", async (req, res) => {
         try {
             const id = req.params.id;
@@ -244,18 +244,53 @@ module.exports = (productscollection) => {
                 return res.status(400).send({ message: "Invalid product ID" });
             }
 
-            const result = await productscollection.deleteOne({
-                _id: new ObjectId(id)
+            const objectId = new ObjectId(id);
+            const product = await productscollection.findOne({ _id: objectId });
+
+            if (!product) {
+                return res.status(404).send({ message: "Product not found" });
+            }
+            await productscollection.deleteOne({ _id: objectId });
+
+
+
+            const message = `deleted your product "${product.name}".`;
+            const existingNotification = await notificationcollection.findOne({
+                productId: objectId
             });
 
-            if (result.deletedCount === 0) {
-                return res.status(404).send({ message: "Product not found" });
+
+
+            if (existingNotification) {
+                await notificationcollection.updateOne(
+                    { productId: objectId },
+                    {
+                        $set: {
+                            message: message,
+                            status: "deleted",
+                            updatedAt: new Date(),
+                            read: false
+                        }
+                    }
+                );
+            } else {
+
+                await notificationcollection.insertOne({
+                    productId: objectId,
+                    productName: product.name,
+                    productImage: product.image,
+                    sellerEmail: product.sellerEmail,
+                    status: "deleted",
+                    message: message,
+                    createdAt: new Date(),
+                    read: false
+                });
             }
 
             res.send({
-                message: "Product deleted successfully",
-                deletedCount: result.deletedCount
+                message: "Product deleted and notification handled successfully"
             });
+
         } catch (err) {
             console.log(err);
             res.status(500).send({ message: err.message });
@@ -492,7 +527,7 @@ module.exports = (productscollection) => {
         try {
             const result = await productscollection.aggregate([
                 {
-                    $match: { status: "approved" }  
+                    $match: { status: "approved" }
                 },
                 {
                     $group: {
@@ -503,7 +538,7 @@ module.exports = (productscollection) => {
                     }
                 },
                 {
-                    $sort: { totalSold: -1 } 
+                    $sort: { totalSold: -1 }
                 },
                 {
                     $limit: 5
@@ -546,6 +581,8 @@ module.exports = (productscollection) => {
 
 
 
+
+
     router.patch("/status/:id", async (req, res) => {
         try {
             const id = req.params.id;
@@ -559,8 +596,11 @@ module.exports = (productscollection) => {
                 return res.status(400).send({ message: "Status is required" });
             }
 
-            const result = await productscollection.updateOne(
-                { _id: new ObjectId(id) },
+            const objectId = new ObjectId(id);
+
+    
+            const updateResult = await productscollection.updateOne(
+                { _id: objectId },
                 {
                     $set: {
                         status: status,
@@ -569,13 +609,47 @@ module.exports = (productscollection) => {
                 }
             );
 
-            if (result.matchedCount === 0) {
+            if (updateResult.matchedCount === 0) {
                 return res.status(404).send({ message: "Product not found" });
             }
 
+         
+            const product = await productscollection.findOne({ _id: objectId });
+
+         
+            let message = "";
+
+            if (status === "approved") {
+                message = "Admin approved your product successfully.";
+            } else if (status === "rejected") {
+                message = "Admin rejected your product.";
+            } else {
+                message = `Product status updated to ${status}`;
+            }
+
+           
+            await notificationcollection.updateOne(
+                { productId: objectId }, 
+                {
+                    $set: {
+                        productName: product.name,
+                        productImage: product.image,
+                        sellerEmail: product.sellerEmail,
+                        status: status,
+                        message: message,
+                        updatedAt: new Date(),
+                        read: false
+                    },
+                    $setOnInsert: {
+                        createdAt: new Date()
+                    }
+                },
+                { upsert: true }
+            );
+
             res.send({
-                message: "Product status updated successfully",
-                modifiedCount: result.modifiedCount
+                message: "Product status updated and notification handled successfully",
+                modifiedCount: updateResult.modifiedCount
             });
 
         } catch (err) {

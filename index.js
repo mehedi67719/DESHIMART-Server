@@ -43,6 +43,7 @@ async function run() {
         const paymentcollection = db.collection("payment")
         const usercollection = db.collection("user")
         const chatcollection = db.collection("chat")
+        const notificationcollection=db.collection("notifications")
 
 
 
@@ -72,18 +73,20 @@ async function run() {
         const userrouter = require("./routes/user")
         const chatrouter = require("./routes/chat")
         const alltotalrouter=require("./routes/altotal")
+        const notificationrouter=require("./routes/Notifications")
 
 
-        app.use("/products", productsrouter(productscollection))
+        app.use("/products", productsrouter(productscollection,notificationcollection))
         app.use("/categorys", categoryrouter(productscollection))
         app.use("/brands", brandrouter(productscollection))
         app.use("/Stores", Storesrouter(Storescollection, usercollection))
         app.use("/cart", cartrouter(cartcollection, favoritecollection))
         app.use("/favorite", favoriterouter(favoritecollection, productscollection))
         app.use("/payment", paymentrouter(paymentcollection, cartcollection))
-        app.use("/user", userrouter(usercollection))
+        app.use("/user", userrouter(usercollection,notificationcollection))
         app.use("/chat", chatrouter(chatcollection, io, usercollection))
         app.use("/all-total",alltotalrouter(productscollection,paymentcollection,usercollection))
+        app.use("/notification",notificationrouter(notificationcollection))
 
 
 

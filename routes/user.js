@@ -3,7 +3,7 @@ const { ObjectId } = require("mongodb");
 const router = express.Router();
 
 
-module.exports = (usercollection) => {
+module.exports = (usercollection, notificationcollection) => {
 
 
     router.get('/all-users', async (req, res) => {
@@ -55,7 +55,7 @@ module.exports = (usercollection) => {
             console.log(err);
             res.status(500).send({ message: "server error" });
         }
-    }); 
+    });
 
 
 
@@ -90,22 +90,46 @@ module.exports = (usercollection) => {
                 return res.status(400).send({ message: "Email and role are required" });
             }
 
-            const filter = { email: email };
-            const updatedDoc = {
-                $set: {
-                    role: role
-                }
-            };
+            const user = await usercollection.findOne({ email: email });
 
-            const result = await usercollection.updateOne(filter, updatedDoc);
-
-            if (result.matchedCount === 0) {
+            if (!user) {
                 return res.status(404).send({ message: "User not found" });
             }
 
+            const oldRole = user.role;
+
+         
+            await usercollection.updateOne(
+                { email: email },
+                {
+                    $set: {
+                        role: role,
+                        updatedAt: new Date()
+                    }
+                }
+            );
+
+            const message = `Admin changed your role from "${oldRole}" to "${role}".`;
+            await notificationcollection.updateOne(
+                { email: email, type: "role-update" },
+                {
+                    $set: {
+                        email: email,
+                        role: role,
+                        message: message,
+                        type: "role-update",
+                        updatedAt: new Date(),
+                        read: false
+                    },
+                    $setOnInsert: {
+                        createdAt: new Date()
+                    }
+                },
+                { upsert: true }
+            );
+
             res.send({
-                message: "User role updated successfully",
-                result
+                message: "User role updated and notification handled successfully"
             });
 
         } catch (error) {
@@ -113,6 +137,8 @@ module.exports = (usercollection) => {
             res.status(500).send({ message: "Server error" });
         }
     });
+
+    
 
 
     router.get("/pending-user", async (req, res) => {
