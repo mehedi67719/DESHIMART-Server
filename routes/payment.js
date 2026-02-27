@@ -171,7 +171,6 @@ module.exports = (paymentcollection, cartcollection) => {
     try {
       const sellerEmail = req.query.sellerEmail;
 
-      // console.log(sellerEmail)
 
       if (!sellerEmail) {
         return res.status(400).send({ message: "Seller email is required" });
@@ -267,7 +266,7 @@ module.exports = (paymentcollection, cartcollection) => {
     try {
       const result = await paymentcollection.aggregate([
         {
-          $match: { status: "SUCCESS" } // শুধু successful payment
+          $match: { status: "SUCCESS" } 
         },
         {
           $group: {

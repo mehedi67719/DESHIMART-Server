@@ -26,7 +26,12 @@ module.exports = (notificationcollection) => {
             const email = req.params.email;
 
             const notifications = await notificationcollection
-                .find({ sellerEmail: email })
+                .find({
+                    $or: [
+                        { sellerEmail: email },
+                        { email: email }
+                    ]
+                })
                 .sort({ createdAt: -1 })
                 .toArray();
 
