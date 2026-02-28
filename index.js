@@ -78,10 +78,10 @@ async function run() {
         const adminnotificationrouter=require("./routes/adminnotification")
 
 
-        app.use("/products", productsrouter(productscollection))
+        app.use("/products", productsrouter(productscollection,notificationcollection))
         app.use("/categorys", categoryrouter(productscollection))
         app.use("/brands", brandrouter(productscollection))
-        app.use("/Stores", Storesrouter(Storescollection, usercollection))
+        app.use("/Stores", Storesrouter(Storescollection, usercollection,notificationcollection))
         app.use("/cart", cartrouter(cartcollection, favoritecollection))
         app.use("/favorite", favoriterouter(favoritecollection, productscollection))
         app.use("/payment", paymentrouter(paymentcollection, cartcollection,notificationcollection))

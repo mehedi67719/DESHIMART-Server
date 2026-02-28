@@ -109,7 +109,7 @@ module.exports = (usercollection, notificationcollection) => {
                 }
             );
 
-            const message = `Admin changed your role from "${oldRole}" to "${role}".`;
+            const message = `changed your role from "${oldRole}" to "${role}".`;
             await notificationcollection.updateOne(
                 { email: email, type: "role-update" },
                 {
@@ -118,12 +118,10 @@ module.exports = (usercollection, notificationcollection) => {
                         role: role,
                         message: message,
                         type: "role-update",
-                        updatedAt: new Date(),
-                        read: false
-                    },
-                    $setOnInsert: {
+                        read: false,
                         createdAt: new Date()
-                    }
+                    },
+                    
                 },
                 { upsert: true }
             );

@@ -4,7 +4,7 @@ const router = express.Router();
 
 module.exports = (notificationcollection) => {
 
-    // ✅ 1️⃣ Get All Notifications (Admin)
+    
     router.get("/all-notifications", async (req, res) => {
         try {
             const notifications = await notificationcollection
@@ -20,7 +20,7 @@ module.exports = (notificationcollection) => {
     });
 
 
-    // ✅ 2️⃣ Get Seller Specific Notifications
+   
     router.get("/my-notifications/:email", async (req, res) => {
         try {
             const email = req.params.email;
@@ -43,21 +43,55 @@ module.exports = (notificationcollection) => {
     });
 
 
-    // ✅ 3️⃣ Get Unread Notification Count
     router.get("/unread-count/:email", async (req, res) => {
         try {
             const email = req.params.email;
 
             const count = await notificationcollection.countDocuments({
-                sellerEmail: email,
-                read: false
+                $or: [
+                    { sellerEmail: email },
+                    { email: email }
+                ],
+                read: false  
             });
 
             res.send({ unreadCount: count });
+
         } catch (err) {
+            console.error(err);
             res.status(500).send({ message: "Server error" });
         }
     });
+
+
+
+    router.patch("/update-read/:email", async (req, res) => {
+        try {
+            const email = req.params.email;
+
+            const result = await notificationcollection.updateMany(
+                {
+                    $or: [
+                        { sellerEmail: email },
+                        { email: email }
+                    ]
+                },
+                {
+                    $set: { read: true }
+                }
+            );
+
+            res.send({
+                message: "Notifications marked as read",
+                modifiedCount: result.modifiedCount
+            });
+
+        } catch (err) {
+            console.error(err);
+            res.status(500).send({ message: "Server error" });
+        }
+    });
+
 
 
     // ✅ 4️⃣ Mark Notification As Read

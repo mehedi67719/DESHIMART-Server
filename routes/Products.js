@@ -343,11 +343,33 @@ module.exports = (productscollection, notificationcollection) => {
                 return res.status(400).send({ message: "Product data is required" });
             }
 
+        
             const result = await productscollection.insertOne(data);
+            const insertedProduct = { ...data, _id: result.insertedId };
+
+        
+            await notificationcollection.updateOne(
+                { productId: insertedProduct._id },
+                {
+                    $set: {
+                        productName: insertedProduct.name,
+                        productImage: insertedProduct.image || "",
+                        sellerEmail: insertedProduct.sellerEmail,
+                        status: insertedProduct.status || "pending",
+                        adminmessage:"A product is pending for your approval. Please check the Pending Approval page.",
+                        message: "Congratulations! Your product has been added successfully and is currently awaiting admin approval. Please wait patiently while our team reviews it.",
+                        createdAt: new Date(),
+                        read: false,
+                        type: "product-add"
+                    }
+                },
+                { upsert: true }
+            );
 
             res.status(201).send({
                 success: true,
-                insertedId: result.insertedId
+                insertedId: result.insertedId,
+                message: "Product added successfully and notification sent"
             });
 
         } catch (err) {
@@ -598,7 +620,7 @@ module.exports = (productscollection, notificationcollection) => {
 
             const objectId = new ObjectId(id);
 
-    
+
             const updateResult = await productscollection.updateOne(
                 { _id: objectId },
                 {
@@ -613,10 +635,10 @@ module.exports = (productscollection, notificationcollection) => {
                 return res.status(404).send({ message: "Product not found" });
             }
 
-         
+
             const product = await productscollection.findOne({ _id: objectId });
 
-         
+
             let message = "";
 
             if (status === "approved") {
@@ -627,9 +649,9 @@ module.exports = (productscollection, notificationcollection) => {
                 message = `Product status updated to ${status}`;
             }
 
-           
+
             await notificationcollection.updateOne(
-                { productId: objectId }, 
+                { productId: objectId },
                 {
                     $set: {
                         productName: product.name,
@@ -637,12 +659,10 @@ module.exports = (productscollection, notificationcollection) => {
                         sellerEmail: product.sellerEmail,
                         status: status,
                         message: message,
-                        updatedAt: new Date(),
+                        createdAt: new Date(),
                         read: false
                     },
-                    $setOnInsert: {
-                        createdAt: new Date()
-                    }
+
                 },
                 { upsert: true }
             );

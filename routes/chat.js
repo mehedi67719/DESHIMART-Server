@@ -43,7 +43,7 @@ module.exports = (chatcollection, io, usercollection) => {
                 lastMessageTime: new Date(),
                 chat: [],
                 seenBy: [],
-                unreadCount: 0
+                read: false,
             });
 
             res.status(201).send({
