@@ -44,7 +44,8 @@ async function run() {
         const usercollection = db.collection("user")
         const chatcollection = db.collection("chat")
         const notificationcollection=db.collection("notifications")
-        const adminnotificationcollection=db.collection("adminnotification")
+        const adminnotificationcollection=db.collection("adminNotification")
+     
 
 
 
@@ -75,13 +76,14 @@ async function run() {
         const chatrouter = require("./routes/chat")
         const alltotalrouter=require("./routes/altotal")
         const notificationrouter=require("./routes/Notifications")
-        const adminnotificationrouter=require("./routes/adminnotification")
+        const adminnotificationrouter=require("./routes/adminNotification")
+        
 
 
-        app.use("/products", productsrouter(productscollection,notificationcollection))
+        app.use("/products", productsrouter(productscollection,notificationcollection,adminnotificationcollection))
         app.use("/categorys", categoryrouter(productscollection))
         app.use("/brands", brandrouter(productscollection))
-        app.use("/Stores", Storesrouter(Storescollection, usercollection,notificationcollection))
+        app.use("/Stores", Storesrouter(Storescollection, usercollection,notificationcollection,adminnotificationcollection))
         app.use("/cart", cartrouter(cartcollection, favoritecollection))
         app.use("/favorite", favoriterouter(favoritecollection, productscollection))
         app.use("/payment", paymentrouter(paymentcollection, cartcollection,notificationcollection))
@@ -89,7 +91,8 @@ async function run() {
         app.use("/chat", chatrouter(chatcollection, io, usercollection))
         app.use("/all-total",alltotalrouter(productscollection,paymentcollection,usercollection))
         app.use("/notification",notificationrouter(notificationcollection))
-        app.use("/admin-notification",adminnotificationrouter(adminnotificationcollection))
+        app.use("/admin-notification",adminnotificationrouter(adminnotificationcollection,usercollection))
+   
 
 
 

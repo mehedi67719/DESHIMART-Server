@@ -5,7 +5,7 @@ const { ObjectId } = require('mongodb');
 
 
 
-module.exports = (productscollection, notificationcollection) => {
+module.exports = (productscollection, notificationcollection,adminnotificationcollection) => {
 
 
 
@@ -347,6 +347,20 @@ module.exports = (productscollection, notificationcollection) => {
             const result = await productscollection.insertOne(data);
             const insertedProduct = { ...data, _id: result.insertedId };
 
+
+            await adminnotificationcollection.insertOne(
+                    {
+                        productName: insertedProduct.name,
+                        productImage: insertedProduct.image || "",
+                        sellerEmail: insertedProduct.sellerEmail,
+                        status: insertedProduct.status || "pending",
+                        adminmessage:"A product is pending for your approval. Please check the Pending Approval page.",
+                        createdAt: new Date(),
+                        read: false,
+                        type: "product-add"
+                    }
+            )
+
         
             await notificationcollection.updateOne(
                 { productId: insertedProduct._id },
@@ -356,7 +370,6 @@ module.exports = (productscollection, notificationcollection) => {
                         productImage: insertedProduct.image || "",
                         sellerEmail: insertedProduct.sellerEmail,
                         status: insertedProduct.status || "pending",
-                        adminmessage:"A product is pending for your approval. Please check the Pending Approval page.",
                         message: "Congratulations! Your product has been added successfully and is currently awaiting admin approval. Please wait patiently while our team reviews it.",
                         createdAt: new Date(),
                         read: false,

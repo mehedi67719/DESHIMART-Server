@@ -5,19 +5,21 @@ const router = express.Router();
 module.exports = (notificationcollection) => {
 
     
-    router.get("/all-notifications", async (req, res) => {
-        try {
-            const notifications = await notificationcollection
-                .find()
-                .sort({ createdAt: -1 })
-                .toArray();
+    // router.get("/all-notifications", async (req, res) => {
+    //     try {
+    //         const notifications = await notificationcollection
+    //             .find()
+    //             .sort({ createdAt: -1 })
+    //             .toArray();
 
-            res.send(notifications);
-        } catch (err) {
-            console.log(err);
-            res.status(500).send({ message: "Server error" });
-        }
-    });
+    //         res.send(notifications);
+    //     } catch (err) {
+    //         console.log(err);
+    //         res.status(500).send({ message: "Server error" });
+    //     }
+    // });
+
+
 
 
    
