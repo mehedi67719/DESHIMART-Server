@@ -4,7 +4,7 @@ const router = express.Router();
 
 
 
-module.exports = (cartcollection,favoritecollection) => {
+module.exports = (cartcollection, favoritecollection) => {
 
     router.post("/from-favorite", async (req, res) => {
         const cartdata = req.body
@@ -21,7 +21,7 @@ module.exports = (cartcollection,favoritecollection) => {
 
 
 
-        router.post("/", async (req, res) => {
+    router.post("/", async (req, res) => {
         const cartdata = req.body
 
         try {
@@ -49,6 +49,27 @@ module.exports = (cartcollection,favoritecollection) => {
 
 
 
+    router.get("/cart-count/:email", async (req, res) => {
+        try {
+            const email = req.params.email;
+
+            if (!email) {
+                return res.status(400).send({ message: "Email is required" });
+            }
+
+            const count = await cartcollection.countDocuments({
+                userEmail: email
+            });
+
+            res.send({ count });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).send({ message: "Server Error" });
+        }
+    });
+
+
 
     router.delete("/:id", async (req, res) => {
         try {
@@ -67,7 +88,7 @@ module.exports = (cartcollection,favoritecollection) => {
     })
 
 
-    
+
 
     return router
 }

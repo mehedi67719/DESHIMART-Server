@@ -86,14 +86,14 @@ module.exports = (favoritecollection, productscollection) => {
         try {
             const userEmail = req.params.email;
             const favorites = await favoritecollection.find({ userEmail: userEmail }).toArray();
-            
+
             const productIds = favorites.map(fav => fav.productId);
-            
+
             if (productIds.length === 0) return res.status(200).send([]);
-            
+
             const objectIds = productIds.map(id => new ObjectId(id));
             const products = await productscollection.find({ _id: { $in: objectIds } }).toArray();
-            
+
             const result = favorites.map(fav => {
                 const product = products.find(p => p._id.toString() === fav.productId.toString());
                 return {
@@ -104,11 +104,32 @@ module.exports = (favoritecollection, productscollection) => {
                     ...product
                 };
             });
-            
+
             res.status(200).send(result);
         } catch (err) {
             console.error(err);
             res.status(500).send({ message: "Server error" });
+        }
+    });
+
+
+    router.get("/favorite-count/:email", async (req, res) => {
+        try {
+            const email = req.params.email;
+
+            if (!email) {
+                return res.status(400).send({ message: "Email is required" });
+            }
+
+            const count = await favoritecollection.countDocuments({
+                userEmail: email
+            });
+
+            res.send({ count });
+
+        } catch (error) {
+            console.log(error);
+            res.status(500).send({ message: "Server Error" });
         }
     });
 
