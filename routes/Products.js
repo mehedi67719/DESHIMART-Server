@@ -5,7 +5,7 @@ const { ObjectId } = require('mongodb');
 
 
 
-module.exports = (productscollection, notificationcollection,adminnotificationcollection) => {
+module.exports = (productscollection, notificationcollection, adminnotificationcollection) => {
 
 
 
@@ -60,6 +60,64 @@ module.exports = (productscollection, notificationcollection,adminnotificationco
         } catch (err) {
             console.log(err);
             res.status(500).send({ message: "Error fetching top categories" });
+        }
+    });
+
+
+
+    router.get("/search", async (req, res) => {
+        try {
+            const searchTerm = req.query.q;
+
+            if (!searchTerm || searchTerm.length < 2) {
+                return res.status(400).send({
+                    message: "Search term must be at least 2 characters"
+                });
+            }
+
+        
+            const regex = new RegExp(searchTerm, 'i');
+
+          
+            const products = await productscollection
+                .find({
+                    status: "approved", 
+                    $or: [
+                        { name: { $regex: regex } },
+                        { description: { $regex: regex } },
+                        { category: { $regex: regex } },
+                        { brand: { $regex: regex } },
+                        { tags: { $in: [regex] } }
+                    ]
+                })
+                .project({
+                    _id: 1,
+                    name: 1,
+                    price: 1,
+                    oldPrice: 1,
+                    image: 1,
+                    images: 1,
+                    category: 1,
+                    brand: 1,
+                    rating: 1,
+                    discount: 1,
+                    status: 1
+                })
+                .sort({
+                    rating: -1,  
+                    sold: -1      
+                })
+                .limit(10)       
+                .toArray();
+
+            res.send(products);
+
+        } catch (err) {
+            console.error("Search error:", err);
+            res.status(500).send({
+                message: "Error searching products",
+                error: err.message
+            });
         }
     });
 
@@ -343,25 +401,25 @@ module.exports = (productscollection, notificationcollection,adminnotificationco
                 return res.status(400).send({ message: "Product data is required" });
             }
 
-        
+
             const result = await productscollection.insertOne(data);
             const insertedProduct = { ...data, _id: result.insertedId };
 
 
             await adminnotificationcollection.insertOne(
-                    {
-                        productName: insertedProduct.name,
-                        productImage: insertedProduct.image || "",
-                        sellerEmail: insertedProduct.sellerEmail,
-                        status: insertedProduct.status || "pending",
-                        adminmessage:"A product is pending for your approval. Please check the Pending Approval page.",
-                        createdAt: new Date(),
-                        read: false,
-                        type: "product-add"
-                    }
+                {
+                    productName: insertedProduct.name,
+                    productImage: insertedProduct.image || "",
+                    sellerEmail: insertedProduct.sellerEmail,
+                    status: insertedProduct.status || "pending",
+                    adminmessage: "A product is pending for your approval. Please check the Pending Approval page.",
+                    createdAt: new Date(),
+                    read: false,
+                    type: "product-add"
+                }
             )
 
-        
+
             await notificationcollection.updateOne(
                 { productId: insertedProduct._id },
                 {
