@@ -43,7 +43,7 @@ module.exports = (chatcollection, io, usercollection) => {
                 lastMessageTime: new Date(),
                 chat: [],
                 seenBy: [],
-                read: false,
+                
             });
 
             res.status(201).send({
@@ -86,7 +86,8 @@ module.exports = (chatcollection, io, usercollection) => {
             const newMessage = {
                 sender: useremail,
                 messageText,
-                time: new Date()
+                time: new Date(),
+                read:false,
             };
 
             const chat = await chatcollection.findOne({ _id: new ObjectId(chatId) });

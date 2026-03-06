@@ -75,13 +75,13 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
                 });
             }
 
-        
+
             const regex = new RegExp(searchTerm, 'i');
 
-          
+
             const products = await productscollection
                 .find({
-                    status: "approved", 
+                    status: "approved",
                     $or: [
                         { name: { $regex: regex } },
                         { description: { $regex: regex } },
@@ -104,10 +104,10 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
                     status: 1
                 })
                 .sort({
-                    rating: -1,  
-                    sold: -1      
+                    rating: -1,
+                    sold: -1
                 })
-                .limit(10)       
+                .limit(10)
                 .toArray();
 
             res.send(products);
@@ -122,7 +122,24 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
     });
 
 
+    router.get("/similar-products/:category", async (req, res) => {
+        try {
+            const category = req.params.category;
+            console.log(category)
 
+            const result = await productscollection
+                .find({ category: category, status: "approved" })
+                .sort({ sold: -1 })
+                .limit(5)
+                .toArray();
+
+            res.send(result);
+        }
+        catch (error) {
+            console.log(error);
+            res.status(500).send({ message: "Server error" });
+        }
+    });
 
 
     router.get("/all-products", async (req, res) => {
