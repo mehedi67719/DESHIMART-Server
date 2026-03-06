@@ -3,7 +3,7 @@ const express = require('express')
 const app = express()
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const port = 5000
+const port = 3000
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -76,7 +76,7 @@ async function run() {
         const chatrouter = require("./routes/chat")
         const alltotalrouter=require("./routes/altotal")
         const notificationrouter=require("./routes/Notifications")
-        const adminnotificationrouter=require("./routes/adminNotification")
+        const adminnotificationrouter=require("./routes/adminnotification")
         
 
 
