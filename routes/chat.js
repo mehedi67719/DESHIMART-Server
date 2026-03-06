@@ -5,17 +5,17 @@ const router = express.Router();
 module.exports = (chatcollection, io, usercollection) => {
     io.on('connection', (socket) => {
         console.log('User connected:', socket.id);
-        
+
         socket.on('join-chat', (chatId) => {
             socket.join(chatId);
             console.log(`Socket ${socket.id} joined chat ${chatId}`);
         });
-        
+
         socket.on('leave-chat', (chatId) => {
             socket.leave(chatId);
             console.log(`Socket ${socket.id} left chat ${chatId}`);
         });
-        
+
         socket.on('disconnect', () => {
             console.log('User disconnected:', socket.id);
         });
@@ -43,7 +43,7 @@ module.exports = (chatcollection, io, usercollection) => {
                 lastMessageTime: new Date(),
                 chat: [],
                 seenBy: [],
-                
+
             });
 
             res.status(201).send({
@@ -87,7 +87,7 @@ module.exports = (chatcollection, io, usercollection) => {
                 sender: useremail,
                 messageText,
                 time: new Date(),
-                read:false,
+                read: false,
             };
 
             const chat = await chatcollection.findOne({ _id: new ObjectId(chatId) });
@@ -98,14 +98,14 @@ module.exports = (chatcollection, io, usercollection) => {
                 {
                     $push: { chat: newMessage },
                     $set: { lastMessage: messageText, lastMessageTime: new Date() },
-                    $inc: { unreadCount: 1 }
+
                 }
             );
 
-            io.to(chatId).emit("new-message", { 
-                chatId, 
+            io.to(chatId).emit("new-message", {
+                chatId,
                 newMessage,
-                sender: useremail 
+                sender: useremail
             });
 
             res.send({ success: true, newMessage });
@@ -116,38 +116,34 @@ module.exports = (chatcollection, io, usercollection) => {
         }
     });
 
-    router.put("/mark-seen/:chatId", async (req, res) => {
-        try {
-            const { chatId } = req.params;
-            const { userEmail } = req.body;
 
-            if (!chatId || !userEmail)
-                return res.status(400).send({ message: "ChatId and userEmail required" });
+    router.patch("/mark-read/:chatId", async (req, res) => {
+        const { chatId } = req.params;
+        const { userEmail } = req.body;
 
-            const chat = await chatcollection.findOne({ _id: new ObjectId(chatId) });
-            if (!chat) return res.status(404).send({ message: "Chat not found" });
+        console.log(chatId, userEmail);
 
-            const alreadySeen = chat.seenBy.includes(userEmail);
+        const chat = await chatcollection.findOne({ _id: new ObjectId(chatId) });
+        if (!chat) return res.status(404).send({ message: "Chat not found" });
 
-            if (!alreadySeen) {
-                await chatcollection.updateOne(
-                    { _id: new ObjectId(chatId) },
-                    {
-                        $addToSet: { seenBy: userEmail },
-                        $set: { unreadCount: 0 }
-                    }
-                );
+        const updatedMessages = chat.chat.map(msg =>
+            msg.sender !== userEmail ? { ...msg, read: true } : msg
+        );
 
-                io.to(chatId).emit("message-seen", { chatId, userEmail });
-            }
+        await chatcollection.updateOne(
+            { _id: new ObjectId(chatId) },
+            { $set: { chat: updatedMessages } }
+        );
 
-            res.send({ success: true, chatId, userEmail });
+        io.to(chatId).emit("messages-read", {
+            chatId,
+            userEmail,
+            updatedMessages
+        });
 
-        } catch (err) {
-            console.log(err);
-            res.status(500).send({ message: "Server error" });
-        }
+        res.send({ success: true, chat: { ...chat, chat: updatedMessages } });
     });
+
 
     return router;
 };
