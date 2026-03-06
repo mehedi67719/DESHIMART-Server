@@ -3,7 +3,7 @@ const express = require('express')
 const app = express()
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const port = 3000
+const port = 5000
 const http = require('http');
 const { Server } = require('socket.io');
 
