@@ -34,7 +34,7 @@ module.exports = (paymentcollection, cartcollection) => {
         total_amount: totalAmount,
         currency: 'BDT',
         tran_id: tran_id,
-        success_url: `https://deshimart-server.onrender.com/payment/payment-success/${tran_id}`,
+        success_url: `https://deshimart-server.onrender.com/payment-success/${tran_id}`,
         fail_url: `https://deshimart-server.onrender.com/payment-fail/${tran_id}`,
         cancel_url: `https://deshimart-server.onrender.com/payment-cancel/${tran_id}`,
         ipn_url: 'https://deshimart-server.onrender.com/payment/ipn',
@@ -103,7 +103,7 @@ module.exports = (paymentcollection, cartcollection) => {
       await cartcollection.deleteMany({ userEmail: payment.userEmail });
 
 
-      res.redirect(`https://deshimart-server.onrender.com/payment-success?tran_id=${tran_id}`);
+      res.redirect(`https://deshimart-1451e.web.app/payment-success?tran_id=${tran_id}`);
 
     } catch (err) {
       console.log("Payment Success Error:", err);
@@ -120,7 +120,7 @@ module.exports = (paymentcollection, cartcollection) => {
       { tran_id: tran_id },
       { $set: { status: "CANCLE", created_at: new Date() } }
     )
-    res.redirect("https://deshimart-server.onrender.com/payment-cancel")
+    res.redirect("https://deshimart-1451e.web.app/payment-cancel")
   })
 
 
@@ -131,7 +131,7 @@ module.exports = (paymentcollection, cartcollection) => {
       { tran_id: tran_id },
       { $set: { status: "FAIL", created_at: new Date() } }
     )
-    res.redirect("https://deshimart-server.onrender.com/payment-fail")
+    res.redirect("https://deshimart-1451e.web.app/payment-fail")
   })
 
 
