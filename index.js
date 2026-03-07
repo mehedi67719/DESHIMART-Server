@@ -45,6 +45,7 @@ async function run() {
         const chatcollection = db.collection("chat")
         const notificationcollection=db.collection("notifications")
         const adminnotificationcollection=db.collection("adminNotification")
+        const blogcollection=db.collection("blog")
      
 
 
@@ -77,6 +78,8 @@ async function run() {
         const alltotalrouter=require("./routes/altotal")
         const notificationrouter=require("./routes/Notifications")
         const adminnotificationrouter=require("./routes/adminnotification")
+        const blogrouter=require("./routes/blog")
+
         
 
 
@@ -92,6 +95,7 @@ async function run() {
         app.use("/all-total",alltotalrouter(productscollection,paymentcollection,usercollection))
         app.use("/notification",notificationrouter(notificationcollection))
         app.use("/admin-notification",adminnotificationrouter(adminnotificationcollection,usercollection))
+        app.use("/blog",blogrouter(blogcollection))
    
 
 
