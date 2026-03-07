@@ -76,6 +76,19 @@ module.exports = (paymentcollection, cartcollection) => {
   });
 
 
+  router.post("/payment-success/:tran_id", async (req, res) => {
+    const { tran_id } = req.params;
+    const payment = await paymentcollection.findOne({ tran_id });
+    if (!payment) return res.status(404).send("Payment not found");
+
+    await paymentcollection.updateOne(
+      { tran_id },
+      { $set: { status: "SUCCESS", paid_at: new Date() } }
+    );
+    await cartcollection.deleteMany({ userEmail: payment.userEmail });
+    res.redirect(`https://deshimart-1451e.web.app/payment-success?tran_id=${tran_id}`);
+  });
+
 
   router.get("/payment-success/:tran_id", async (req, res) => {
     try {
