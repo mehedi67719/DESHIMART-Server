@@ -77,34 +77,23 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
-  router.post("/payment-success/:tran_id", async (req, res) => {
+  router.get("/payment-success/:tran_id", async (req, res) => {
     try {
       const { tran_id } = req.params;
-
-
       const payment = await paymentcollection.findOne({ tran_id });
 
       if (!payment) {
         return res.status(404).send({ message: "Payment not found" });
       }
 
-
       await paymentcollection.updateOne(
         { tran_id },
-        {
-          $set: {
-            status: "SUCCESS",
-            paid_at: new Date()
-          }
-        }
+        { $set: { status: "SUCCESS", paid_at: new Date() } }
       );
-
 
       await cartcollection.deleteMany({ userEmail: payment.userEmail });
 
-
       res.redirect(`https://deshimart-1451e.web.app/payment-success?tran_id=${tran_id}`);
-
     } catch (err) {
       console.log("Payment Success Error:", err);
       res.status(500).send({ message: err.message });
@@ -266,7 +255,7 @@ module.exports = (paymentcollection, cartcollection) => {
     try {
       const result = await paymentcollection.aggregate([
         {
-          $match: { status: "SUCCESS" } 
+          $match: { status: "SUCCESS" }
         },
         {
           $group: {
@@ -288,7 +277,7 @@ module.exports = (paymentcollection, cartcollection) => {
           }
         },
         {
-          $sort: { totalOrders: -1 } 
+          $sort: { totalOrders: -1 }
         },
         {
           $limit: 5
