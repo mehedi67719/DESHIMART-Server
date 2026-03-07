@@ -34,10 +34,10 @@ module.exports = (paymentcollection, cartcollection) => {
         total_amount: totalAmount,
         currency: 'BDT',
         tran_id: tran_id,
-        success_url: `http://localhost:3000/payment/payment-success/${tran_id}`,
-        fail_url: `http://localhost:3000/payment/payment-fail/${tran_id}`,
-        cancel_url: `http://localhost:3000/payment/payment-cancel/${tran_id}`,
-        ipn_url: 'http://localhost:3000/payment/ipn',
+        success_url: `https://deshimart-server.onrender.com/payment/payment-success/${tran_id}`,
+        fail_url: `https://deshimart-server.onrender.com/payment-fail/${tran_id}`,
+        cancel_url: `https://deshimart-server.onrender.com/payment-cancel/${tran_id}`,
+        ipn_url: 'https://deshimart-server.onrender.com/payment/ipn',
         shipping_method: 'Courier',
         product_name: 'Computer',
         product_category: 'Electronic',
@@ -103,7 +103,7 @@ module.exports = (paymentcollection, cartcollection) => {
       await cartcollection.deleteMany({ userEmail: payment.userEmail });
 
 
-      res.redirect(`http://localhost:5173/payment-success?tran_id=${tran_id}`);
+      res.redirect(`https://deshimart-server.onrender.com/payment-success?tran_id=${tran_id}`);
 
     } catch (err) {
       console.log("Payment Success Error:", err);
@@ -120,7 +120,7 @@ module.exports = (paymentcollection, cartcollection) => {
       { tran_id: tran_id },
       { $set: { status: "CANCLE", created_at: new Date() } }
     )
-    res.redirect("http://localhost:5173/payment-cancel")
+    res.redirect("https://deshimart-server.onrender.com/payment-cancel")
   })
 
 
@@ -131,7 +131,7 @@ module.exports = (paymentcollection, cartcollection) => {
       { tran_id: tran_id },
       { $set: { status: "FAIL", created_at: new Date() } }
     )
-    res.redirect("http://localhost:5173/payment-fail")
+    res.redirect("https://deshimart-server.onrender.com/payment-fail")
   })
 
 
