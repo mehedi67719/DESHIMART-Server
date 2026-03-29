@@ -1,5 +1,6 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const verifyToken = require("./middleware/verifyToken");
 const router = express.Router();
 
 module.exports = (notificationcollection) => {
@@ -23,7 +24,7 @@ module.exports = (notificationcollection) => {
 
 
    
-    router.get("/my-notifications/:email", async (req, res) => {
+    router.get("/my-notifications/:email",verifyToken, async (req, res) => {
         try {
             const email = req.params.email;
 
@@ -45,7 +46,7 @@ module.exports = (notificationcollection) => {
     });
 
 
-    router.get("/unread-count/:email", async (req, res) => {
+    router.get("/unread-count/:email",verifyToken, async (req, res) => {
         try {
             const email = req.params.email;
 
@@ -67,7 +68,7 @@ module.exports = (notificationcollection) => {
 
 
 
-    router.patch("/update-read/:email", async (req, res) => {
+    router.patch("/update-read/:email", verifyToken,async (req, res) => {
         try {
             const email = req.params.email;
 
@@ -96,8 +97,8 @@ module.exports = (notificationcollection) => {
 
 
 
-    // ✅ 4️⃣ Mark Notification As Read
-    router.patch("/mark-as-read/:id", async (req, res) => {
+    
+    router.patch("/mark-as-read/:id",verifyToken, async (req, res) => {
         try {
             const id = req.params.id;
 
@@ -123,8 +124,8 @@ module.exports = (notificationcollection) => {
     });
 
 
-    // ✅ 5️⃣ Delete Notification
-    router.delete("/:id", async (req, res) => {
+  
+    router.delete("/:id",verifyToken, async (req, res) => {
         try {
             const id = req.params.id;
 

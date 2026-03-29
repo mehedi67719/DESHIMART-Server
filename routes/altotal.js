@@ -1,29 +1,43 @@
 const express = require('express');
+const verifyToken = require('./middleware/verifyToken');
 const router = express.Router();
 
 module.exports = (productscollection, paymentcollection, usercollection) => {
 
-  router.get("/all-total", async (req, res) => {
+  router.get("/all-total", verifyToken, async (req, res) => {
     try {
+      const useremail = req.decoded_email;
 
-      // 1️⃣ Total Successful Orders
-      const totalOrders = await paymentcollection.countDocuments({
-        status: "SUCCESS"
-      });
+      const finduser = await usercollection.findOne({ email: useremail });
 
-      // 2️⃣ Total Users
-      const totalUsers = await usercollection.countDocuments();
 
-      // 3️⃣ Total Approved Products
-      const totalProducts = await productscollection.countDocuments({
-        status: "approved"
-      });
 
-      res.send({
-        totalOrders,
-        totalUsers,
-        totalProducts
-      });
+      if (!finduser) {
+        return res.status(404).send({ message: "user not found" })
+      }
+
+      else {
+        if (finduser.role == "admin") {
+          const totalOrders = await paymentcollection.countDocuments({
+            status: "SUCCESS"
+          });
+
+
+          const totalUsers = await usercollection.countDocuments();
+
+          const totalProducts = await productscollection.countDocuments({
+            status: "approved"
+          });
+
+          res.send({
+            totalOrders,
+            totalUsers,
+            totalProducts
+          });
+        }
+      }
+
+
 
     } catch (err) {
       console.log(err);

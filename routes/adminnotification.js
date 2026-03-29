@@ -1,11 +1,12 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const verifyToken = require("./middleware/verifyToken");
 const router = express.Router();
 
 module.exports = (adminnotificationcollection, usercollection) => {
 
   
-    router.get("/:email", async (req, res) => {
+    router.get("/:email",verifyToken, async (req, res) => {
         try {
             const email = req.params.email;
 
@@ -34,7 +35,7 @@ module.exports = (adminnotificationcollection, usercollection) => {
     });
 
   
-    router.get("/count/:email", async (req, res) => {
+    router.get("/count/:email",verifyToken, async (req, res) => {
         try {
             const email = req.params.email;
 
@@ -61,7 +62,7 @@ module.exports = (adminnotificationcollection, usercollection) => {
 
 
 
-    router.patch("/update-read/:email", async (req, res) => {
+    router.patch("/update-read/:email",verifyToken, async (req, res) => {
         try {
             const email = req.params.email;
 

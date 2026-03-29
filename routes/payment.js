@@ -2,13 +2,14 @@ const express = require("express");
 const { ObjectId } = require("mongodb");
 const router = express.Router();
 
-const SSLCommerzPayment = require('sslcommerz-lts')
+const SSLCommerzPayment = require('sslcommerz-lts');
+const verifyToken = require("./middleware/verifyToken");
 const store_id = process.env.STORE_ID
 const store_passwd = process.env.STORE_PASSWD
 const is_live = false
 
 
-module.exports = (paymentcollection, cartcollection) => {
+module.exports = (paymentcollection, usercollection, cartcollection) => {
   router.post('/init', async (req, res) => {
     try {
       const { userEmail, items, totalAmount, Name } = req.body;
@@ -140,8 +141,9 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
-  router.get("/order", async (req, res) => {
+  router.get("/order", verifyToken, async (req, res) => {
     try {
+
       const email = req.query.email;
       const result = await paymentcollection.find({ userEmail: email, status: "SUCCESS" }).toArray();
       res.send(result)
@@ -154,7 +156,7 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
-  router.get("/history", async (req, res) => {
+  router.get("/history", verifyToken, async (req, res) => {
     try {
       const email = req.query.email;
       const result = await paymentcollection.find({ userEmail: email }).toArray();
@@ -169,36 +171,54 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
-  router.get('/buyer-order', async (req, res) => {
+  router.get('/buyer-order', verifyToken, async (req, res) => {
     try {
-      const sellerEmail = req.query.sellerEmail;
+
+      const useremail = req.decoded_email;
+
+      const finduser = await usercollection.findOne({ email: useremail });
 
 
-      if (!sellerEmail) {
-        return res.status(400).send({ message: "Seller email is required" });
+
+      if (!finduser) {
+        return res.status(404).send({ message: "user not found" })
+      }
+      else {
+        if (finduser.role == "seller") {
+          const sellerEmail = req.query.sellerEmail;
+
+
+          if (!sellerEmail) {
+            return res.status(400).send({ message: "Seller email is required" });
+          }
+
+
+
+          const result = await paymentcollection.aggregate([
+            { $match: { status: "SUCCESS" } },
+            { $unwind: { path: "$items", preserveNullAndEmptyArrays: true } },
+            { $match: { "items.sellerEmail": sellerEmail } },
+            {
+              $project: {
+                _id: 0,
+                tran_id: 1,
+                customer_name: 1,
+                userEmail: 1,
+                paid_at: 1,
+                item: "$items"
+              }
+            },
+            { $sort: { paid_at: -1 } }
+          ]).toArray();
+
+          console.log("Seller orders fetched:", result.length);
+          res.send(result);
+        }
+        else {
+          return;
+        }
       }
 
-
-
-      const result = await paymentcollection.aggregate([
-        { $match: { status: "SUCCESS" } },
-        { $unwind: { path: "$items", preserveNullAndEmptyArrays: true } },
-        { $match: { "items.sellerEmail": sellerEmail } },
-        {
-          $project: {
-            _id: 0,
-            tran_id: 1,
-            customer_name: 1,
-            userEmail: 1,
-            paid_at: 1,
-            item: "$items"
-          }
-        },
-        { $sort: { paid_at: -1 } }
-      ]).toArray();
-
-      console.log("Seller orders fetched:", result.length);
-      res.send(result);
     } catch (error) {
       console.log("Backend Error:", error);
       res.status(500).send({ message: "Failed to fetch seller items", error: error.message });
@@ -207,37 +227,54 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
-  router.get("/all-order-summary", async (req, res) => {
+  router.get("/all-order-summary", verifyToken, async (req, res) => {
     try {
-      const orders = await paymentcollection.find({ status: "SUCCESS" }).toArray();
-
-      const monthlySummary = {};
-      orders.forEach(order => {
-        if (!order.paid_at || !order.items) return;
-
-        const month = new Date(order.paid_at).toISOString().slice(0, 7);
 
 
-        if (!monthlySummary[month]) {
-          monthlySummary[month] = {
-            totalRevenue: 0,
-            totalItems: 0
-          };
+      const useremail = req.decoded_email;
+
+      const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+      if (!finduser) {
+        return res.status(404).send({ message: "user not found" })
+      }
+
+      else {
+        if (finduser.role == "admin" || finduser.role == "seller") {
+          const orders = await paymentcollection.find({ status: "SUCCESS" }).toArray();
+
+          const monthlySummary = {};
+          orders.forEach(order => {
+            if (!order.paid_at || !order.items) return;
+
+            const month = new Date(order.paid_at).toISOString().slice(0, 7);
+
+
+            if (!monthlySummary[month]) {
+              monthlySummary[month] = {
+                totalRevenue: 0,
+                totalItems: 0
+              };
+            }
+
+
+            monthlySummary[month].totalRevenue += order.totalAmount || 0;
+
+            const itemCount = order.items.reduce((acc, item) => {
+              return acc + (item.quantity || 0);
+            }, 0);
+
+            monthlySummary[month].totalItems += itemCount;
+          });
+
+          res.send({
+            monthlySummary
+          });
         }
+      }
 
-
-        monthlySummary[month].totalRevenue += order.totalAmount || 0;
-
-        const itemCount = order.items.reduce((acc, item) => {
-          return acc + (item.quantity || 0);
-        }, 0);
-
-        monthlySummary[month].totalItems += itemCount;
-      });
-
-      res.send({
-        monthlySummary
-      });
 
     } catch (err) {
       console.log(err);
@@ -247,15 +284,30 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
-  router.get("/order-status-count", async (req, res) => {
+  router.get("/order-status-count", verifyToken, async (req, res) => {
     try {
-      const successCount = await paymentcollection.countDocuments({ status: "SUCCESS" });
-      const pendingCount = await paymentcollection.countDocuments({ status: "CANCLE" });
 
-      res.send({
-        SUCCESS: successCount,
-        CANCLE: pendingCount
-      });
+      const useremail = req.decoded_email;
+
+      const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+      if (!finduser) {
+        return res.status(404).send({ message: "user not found" })
+      }
+      else {
+        if (finduser.role == "admin") {
+          const successCount = await paymentcollection.countDocuments({ status: "SUCCESS" });
+          const pendingCount = await paymentcollection.countDocuments({ status: "CANCLE" });
+
+          res.send({
+            SUCCESS: successCount,
+            CANCLE: pendingCount
+          });
+        }
+      }
+
 
     } catch (error) {
       res.status(500).send({ message: error.message });
@@ -264,7 +316,7 @@ module.exports = (paymentcollection, cartcollection) => {
 
 
 
-  router.get("/top-buyers", async (req, res) => {
+  router.get("/top-buyers", verifyToken, async (req, res) => {
     try {
       const result = await paymentcollection.aggregate([
         {

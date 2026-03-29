@@ -1,9 +1,10 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const verifyToken = require("./middleware/verifyToken");
 const router = express.Router();
 
 module.exports = (favoritecollection, productscollection) => {
-    router.post("/", async (req, res) => {
+    router.post("/",verifyToken, async (req, res) => {
         try {
             const { productId, userEmail } = req.body;
             if (!productId || !userEmail) return res.status(400).send({ message: "Invalid data" });
@@ -28,7 +29,7 @@ module.exports = (favoritecollection, productscollection) => {
         }
     });
 
-    router.delete("/", async (req, res) => {
+    router.delete("/",verifyToken, async (req, res) => {
         try {
             const { productId, userEmail } = req.body;
             const result = await favoritecollection.deleteOne({
@@ -44,7 +45,7 @@ module.exports = (favoritecollection, productscollection) => {
         }
     });
 
-    router.get("/check", async (req, res) => {
+    router.get("/check",verifyToken, async (req, res) => {
         try {
             const { productId, userEmail } = req.query;
             if (!productId || !userEmail) return res.status(400).send({ exists: false });
@@ -61,7 +62,7 @@ module.exports = (favoritecollection, productscollection) => {
         }
     });
 
-    router.post("/toggle", async (req, res) => {
+    router.post("/toggle",verifyToken, async (req, res) => {
         try {
             const { productId, userEmail } = req.body;
             if (!productId || !userEmail) return res.status(400).send({ message: "Invalid data" });
@@ -82,7 +83,7 @@ module.exports = (favoritecollection, productscollection) => {
         }
     });
 
-    router.get("/user/:email", async (req, res) => {
+    router.get("/user/:email",verifyToken, async (req, res) => {
         try {
             const userEmail = req.params.email;
             const favorites = await favoritecollection.find({ userEmail: userEmail }).toArray();
@@ -113,7 +114,7 @@ module.exports = (favoritecollection, productscollection) => {
     });
 
 
-    router.get("/favorite-count/:email", async (req, res) => {
+    router.get("/favorite-count/:email",verifyToken, async (req, res) => {
         try {
             const email = req.params.email;
 

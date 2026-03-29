@@ -6,6 +6,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = 3000
 const http = require('http');
 const { Server } = require('socket.io');
+const verifyToken = require('./routes/middleware/verifyToken');
 
 app.use(express.json());
 app.use(cors());
@@ -43,10 +44,10 @@ async function run() {
         const paymentcollection = db.collection("payment")
         const usercollection = db.collection("user")
         const chatcollection = db.collection("chat")
-        const notificationcollection=db.collection("notifications")
-        const adminnotificationcollection=db.collection("adminNotification")
-        const blogcollection=db.collection("blog")
-     
+        const notificationcollection = db.collection("notifications")
+        const adminnotificationcollection = db.collection("adminNotification")
+        const blogcollection = db.collection("blog")
+
 
 
 
@@ -66,6 +67,8 @@ async function run() {
 
 
 
+
+
         const productsrouter = require("./routes/Products")
         const categoryrouter = require("./routes/category")
         const brandrouter = require("./routes/brands")
@@ -75,28 +78,34 @@ async function run() {
         const paymentrouter = require("./routes/payment")
         const userrouter = require("./routes/user")
         const chatrouter = require("./routes/chat")
-        const alltotalrouter=require("./routes/altotal")
-        const notificationrouter=require("./routes/Notifications")
-        const adminnotificationrouter=require("./routes/adminnotification")
-        const blogrouter=require("./routes/blog")
+        const alltotalrouter = require("./routes/altotal")
+        const notificationrouter = require("./routes/Notifications")
+        const adminnotificationrouter = require("./routes/adminnotification")
+        const blogrouter = require("./routes/blog")
+        const verifytokenrouter = require("./routes/middleware/verifyToken")
 
-        
 
 
-        app.use("/products", productsrouter(productscollection,notificationcollection,adminnotificationcollection))
+     
+        app.get('/users/profile', verifyToken, (req, res) => {
+            res.json({ message: "This route is protected", token: req.token });
+        });
+
+        app.use("/products", productsrouter(productscollection,usercollection, notificationcollection, adminnotificationcollection))
         app.use("/categorys", categoryrouter(productscollection))
         app.use("/brands", brandrouter(productscollection))
-        app.use("/Stores", Storesrouter(Storescollection, usercollection,notificationcollection,adminnotificationcollection))
+        app.use("/Stores", Storesrouter(Storescollection, usercollection, notificationcollection, adminnotificationcollection))
         app.use("/cart", cartrouter(cartcollection, favoritecollection))
         app.use("/favorite", favoriterouter(favoritecollection, productscollection))
-        app.use("/payment", paymentrouter(paymentcollection, cartcollection,notificationcollection))
-        app.use("/user", userrouter(usercollection,notificationcollection))
+        app.use("/payment", paymentrouter(paymentcollection,usercollection, cartcollection, notificationcollection))
+        app.use("/user", userrouter(usercollection, notificationcollection))
         app.use("/chat", chatrouter(chatcollection, io, usercollection))
-        app.use("/all-total",alltotalrouter(productscollection,paymentcollection,usercollection))
-        app.use("/notification",notificationrouter(notificationcollection))
-        app.use("/admin-notification",adminnotificationrouter(adminnotificationcollection,usercollection))
-        app.use("/blog",blogrouter(blogcollection))
-   
+        app.use("/all-total", alltotalrouter(productscollection, paymentcollection, usercollection))
+        app.use("/notification", notificationrouter(notificationcollection))
+        app.use("/admin-notification", adminnotificationrouter(adminnotificationcollection, usercollection))
+        app.use("/blog", blogrouter(blogcollection))
+        app.use('/users', verifytokenrouter)
+
 
 
 

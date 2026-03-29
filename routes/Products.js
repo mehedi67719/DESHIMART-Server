@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
+const verifyToken = require('./middleware/verifyToken');
 
 
 
 
-module.exports = (productscollection, notificationcollection, adminnotificationcollection) => {
+module.exports = (productscollection, usercollection, notificationcollection, adminnotificationcollection) => {
 
 
 
@@ -186,7 +187,10 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
 
 
 
-    router.get("/pending-approval", async (req, res) => {
+    router.get("/pending-approval", verifyToken, async (req, res) => {
+
+
+
         try {
             const result = await productscollection.find({ status: 'pending' }).toArray();
             res.send(result)
@@ -195,7 +199,8 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
             console.log(err)
             res.status(500).send({ message: "server error" })
         }
-    })
+
+    });
 
 
 
@@ -296,75 +301,114 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
     });
 
 
-    router.get("/my-products", async (req, res) => {
+    router.get("/my-products", verifyToken, async (req, res) => {
         try {
-            const email = req.query.email;
 
-            const result = await productscollection
-                .find({ sellerEmail: email })
-                .toArray();
+            const useremail = req.decoded_email;
 
-            res.send(result);
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
+            }
+            else {
+                if (finduser.role == "admin" || finduser.role == "seller") {
+                    const email = req.query.email;
+
+                    const result = await productscollection
+                        .find({ sellerEmail: email })
+                        .toArray();
+
+                    res.send(result);
+                }
+                else {
+                    return;
+                }
+            }
+
         } catch (err) {
             console.log(err);
             res.status(500).send({ message: err.message });
         }
     });
 
-    router.delete("/:id", async (req, res) => {
+    router.delete("/:id", verifyToken, async (req, res) => {
         try {
-            const id = req.params.id;
 
-            if (!ObjectId.isValid(id)) {
-                return res.status(400).send({ message: "Invalid product ID" });
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
             }
 
-            const objectId = new ObjectId(id);
-            const product = await productscollection.findOne({ _id: objectId });
+            else {
+                if (finduser.role == "admin" || finduser.role == "seller") {
+                    const id = req.params.id;
 
-            if (!product) {
-                return res.status(404).send({ message: "Product not found" });
-            }
-            await productscollection.deleteOne({ _id: objectId });
-
-
-
-            const message = `deleted your product "${product.name}".`;
-            const existingNotification = await notificationcollection.findOne({
-                productId: objectId
-            });
-
-
-
-            if (existingNotification) {
-                await notificationcollection.updateOne(
-                    { productId: objectId },
-                    {
-                        $set: {
-                            message: message,
-                            status: "deleted",
-                            updatedAt: new Date(),
-                            read: false
-                        }
+                    if (!ObjectId.isValid(id)) {
+                        return res.status(400).send({ message: "Invalid product ID" });
                     }
-                );
-            } else {
 
-                await notificationcollection.insertOne({
-                    productId: objectId,
-                    productName: product.name,
-                    productImage: product.image,
-                    sellerEmail: product.sellerEmail,
-                    status: "deleted",
-                    message: message,
-                    createdAt: new Date(),
-                    read: false
-                });
+                    const objectId = new ObjectId(id);
+                    const product = await productscollection.findOne({ _id: objectId });
+
+                    if (!product) {
+                        return res.status(404).send({ message: "Product not found" });
+                    }
+
+                    
+                    await productscollection.deleteOne({ _id: objectId });
+
+
+
+                    const message = `deleted your product "${product.name}".`;
+                    const existingNotification = await notificationcollection.findOne({
+                        productId: objectId
+                    });
+
+
+
+                    if (existingNotification) {
+                        await notificationcollection.updateOne(
+                            { productId: objectId },
+                            {
+                                $set: {
+                                    message: message,
+                                    status: "deleted",
+                                    updatedAt: new Date(),
+                                    read: false
+                                }
+                            }
+                        );
+                    } else {
+
+                        await notificationcollection.insertOne({
+                            productId: objectId,
+                            productName: product.name,
+                            productImage: product.image,
+                            sellerEmail: product.sellerEmail,
+                            status: "deleted",
+                            message: message,
+                            createdAt: new Date(),
+                            read: false
+                        });
+                    }
+
+                    res.send({
+                        message: "Product deleted and notification handled successfully"
+                    });
+                }
+                else {
+                    return;
+                }
             }
 
-            res.send({
-                message: "Product deleted and notification handled successfully"
-            });
 
         } catch (err) {
             console.log(err);
@@ -373,7 +417,7 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
     });
 
 
-    router.put("/:id", async (req, res) => {
+    router.put("/:id", verifyToken, async (req, res) => {
         try {
             const id = req.params.id;
             const updates = req.body;
@@ -410,55 +454,75 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
 
 
 
-    router.post("/", async (req, res) => {
+    router.post("/", verifyToken, async (req, res) => {
         try {
-            const data = req.body;
 
-            if (!data) {
-                return res.status(400).send({ message: "Product data is required" });
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
             }
 
+            else {
+                if (finduser.role == "seller") {
+                    const data = req.body;
 
-            const result = await productscollection.insertOne(data);
-            const insertedProduct = { ...data, _id: result.insertedId };
-
-
-            await adminnotificationcollection.insertOne(
-                {
-                    productName: insertedProduct.name,
-                    productImage: insertedProduct.image || "",
-                    sellerEmail: insertedProduct.sellerEmail,
-                    status: insertedProduct.status || "pending",
-                    adminmessage: "A product is pending for your approval. Please check the Pending Approval page.",
-                    createdAt: new Date(),
-                    read: false,
-                    type: "product-add"
-                }
-            )
-
-
-            await notificationcollection.updateOne(
-                { productId: insertedProduct._id },
-                {
-                    $set: {
-                        productName: insertedProduct.name,
-                        productImage: insertedProduct.image || "",
-                        sellerEmail: insertedProduct.sellerEmail,
-                        status: insertedProduct.status || "pending",
-                        message: "Congratulations! Your product has been added successfully and is currently awaiting admin approval. Please wait patiently while our team reviews it.",
-                        createdAt: new Date(),
-                        read: false,
-                        type: "product-add"
+                    if (!data) {
+                        return res.status(400).send({ message: "Product data is required" });
                     }
-                },
-                { upsert: true }
-            );
 
-            res.status(201).send({
-                success: true,
-                insertedId: result.insertedId,
-                message: "Product added successfully and notification sent"
-            });
+
+                    const result = await productscollection.insertOne(data);
+                    const insertedProduct = { ...data, _id: result.insertedId };
+
+
+                    await adminnotificationcollection.insertOne(
+                        {
+                            productName: insertedProduct.name,
+                            productImage: insertedProduct.image || "",
+                            sellerEmail: insertedProduct.sellerEmail,
+                            status: insertedProduct.status || "pending",
+                            adminmessage: "A product is pending for your approval. Please check the Pending Approval page.",
+                            createdAt: new Date(),
+                            read: false,
+                            type: "product-add"
+                        }
+                    )
+
+
+                    await notificationcollection.updateOne(
+                        { productId: insertedProduct._id },
+                        {
+                            $set: {
+                                productName: insertedProduct.name,
+                                productImage: insertedProduct.image || "",
+                                sellerEmail: insertedProduct.sellerEmail,
+                                status: insertedProduct.status || "pending",
+                                message: "Congratulations! Your product has been added successfully and is currently awaiting admin approval. Please wait patiently while our team reviews it.",
+                                createdAt: new Date(),
+                                read: false,
+                                type: "product-add"
+                            }
+                        },
+                        { upsert: true }
+                    );
+
+                    res.status(201).send({
+                        success: true,
+                        insertedId: result.insertedId,
+                        message: "Product added successfully and notification sent"
+                    });
+                }
+
+                else {
+                    return res.status(403).send({ message: "you are not seller" })
+                }
+            }
+
 
         } catch (err) {
             console.error(err);
@@ -510,37 +574,59 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
 
 
 
-    router.get("/status-summary", async (req, res) => {
+    router.get("/status-summary", verifyToken, async (req, res) => {
         try {
-            const email = req.query.sellerEmail;
 
-            if (!email) {
-                return res.status(400).send({ message: "Email is required" });
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
             }
 
-            const result = await productscollection.aggregate([
-                {
-                    $match: { sellerEmail: email }
-                },
-                {
-                    $group: {
-                        _id: "$status",
-                        count: { $sum: 1 }
+            else {
+                if (finduser.role == "seller") {
+                    const email = req.query.sellerEmail;
+
+                    if (!email) {
+                        return res.status(400).send({ message: "Email is required" });
                     }
+
+                    const result = await productscollection.aggregate([
+                        {
+                            $match: { sellerEmail: email }
+                        },
+                        {
+                            $group: {
+                                _id: "$status",
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ]).toArray();
+
+                    const summary = {
+                        approved: 0,
+                        rejected: 0,
+                        pending: 0
+                    };
+
+                    result.forEach(item => {
+                        summary[item._id] = item.count;
+                    });
+
+                    res.send(summary);
                 }
-            ]).toArray();
 
-            const summary = {
-                approved: 0,
-                rejected: 0,
-                pending: 0
-            };
+                else {
+                    return res.status(403).send({
+                        message: "you are not seller"
+                    })
+                }
+            }
 
-            result.forEach(item => {
-                summary[item._id] = item.count;
-            });
-
-            res.send(summary);
 
         } catch (err) {
             console.log(err);
@@ -550,30 +636,48 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
 
 
 
-    router.get("/allproducts-status-summary", async (req, res) => {
+    router.get("/allproducts-status-summary",verifyToken, async (req, res) => {
         try {
-            const result = await productscollection.aggregate([
-                {
-                    $group: {
-                        _id: "$status",
-                        count: { $sum: 1 }
-                    }
+
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
+            }
+            else {
+                if (finduser.role == "admin") {
+                    const result = await productscollection.aggregate([
+                        {
+                            $group: {
+                                _id: "$status",
+                                count: { $sum: 1 }
+                            }
+                        }
+                    ]).toArray();
+
+                    const summary = {
+                        approved: 0,
+                        rejected: 0,
+                        pending: 0
+                    };
+
+                    result.forEach(item => {
+                        if (item._id === "approved") summary.approved = item.count;
+                        if (item._id === "rejected") summary.rejected = item.count;
+                        if (item._id === "pending") summary.pending = item.count;
+                    });
+
+                    res.send(summary);
                 }
-            ]).toArray();
+                else {
+                    return res.status(403).send({ message: "you are not admin" })
+                }
+            }
 
-            const summary = {
-                approved: 0,
-                rejected: 0,
-                pending: 0
-            };
-
-            result.forEach(item => {
-                if (item._id === "approved") summary.approved = item.count;
-                if (item._id === "rejected") summary.rejected = item.count;
-                if (item._id === "pending") summary.pending = item.count;
-            });
-
-            res.send(summary);
 
         } catch (err) {
             console.log("Status Summary Error:", err);
@@ -633,29 +737,50 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
 
 
 
-    router.get("/top-sellers", async (req, res) => {
+    router.get("/top-sellers", verifyToken, async (req, res) => {
         try {
-            const result = await productscollection.aggregate([
-                {
-                    $match: { status: "approved" }
-                },
-                {
-                    $group: {
-                        _id: "$sellerEmail",
-                        shopName: { $first: "$shopName" },
-                        totalSold: { $sum: "$sold" },
-                        totalProducts: { $sum: 1 }
-                    }
-                },
-                {
-                    $sort: { totalSold: -1 }
-                },
-                {
-                    $limit: 5
-                }
-            ]).toArray();
 
-            res.send(result);
+
+
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
+            }
+            else {
+                if (finduser.role == "admin") {
+                    const result = await productscollection.aggregate([
+                        {
+                            $match: { status: "approved" }
+                        },
+                        {
+                            $group: {
+                                _id: "$sellerEmail",
+                                shopName: { $first: "$shopName" },
+                                totalSold: { $sum: "$sold" },
+                                totalProducts: { $sum: 1 }
+                            }
+                        },
+                        {
+                            $sort: { totalSold: -1 }
+                        },
+                        {
+                            $limit: 5
+                        }
+                    ]).toArray();
+
+                    res.send(result);
+
+                }
+                else {
+                    return res.status(403).send({ message: "you are not admin" })
+                }
+            }
+
 
         } catch (err) {
             console.log(err);
@@ -693,72 +818,92 @@ module.exports = (productscollection, notificationcollection, adminnotificationc
 
 
 
-    router.patch("/status/:id", async (req, res) => {
+    router.patch("/status/:id", verifyToken, async (req, res) => {
         try {
-            const id = req.params.id;
-            const { status } = req.body;
 
-            if (!ObjectId.isValid(id)) {
-                return res.status(400).send({ message: "Invalid product ID" });
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
             }
+            else {
+                if (finduser.role == "admin") {
+                    const id = req.params.id;
+                    const { status } = req.body;
 
-            if (!status) {
-                return res.status(400).send({ message: "Status is required" });
-            }
-
-            const objectId = new ObjectId(id);
-
-
-            const updateResult = await productscollection.updateOne(
-                { _id: objectId },
-                {
-                    $set: {
-                        status: status,
-                        updatedAt: new Date()
+                    if (!ObjectId.isValid(id)) {
+                        return res.status(400).send({ message: "Invalid product ID" });
                     }
+
+                    if (!status) {
+                        return res.status(400).send({ message: "Status is required" });
+                    }
+
+                    const objectId = new ObjectId(id);
+
+
+                    const updateResult = await productscollection.updateOne(
+                        { _id: objectId },
+                        {
+                            $set: {
+                                status: status,
+                                updatedAt: new Date()
+                            }
+                        }
+                    );
+
+                    if (updateResult.matchedCount === 0) {
+                        return res.status(404).send({ message: "Product not found" });
+                    }
+
+
+                    const product = await productscollection.findOne({ _id: objectId });
+
+
+                    let message = "";
+
+                    if (status === "approved") {
+                        message = "Admin approved your product successfully.";
+                    } else if (status === "rejected") {
+                        message = "Admin rejected your product.";
+                    } else {
+                        message = `Product status updated to ${status}`;
+                    }
+
+
+                    await notificationcollection.updateOne(
+                        { productId: objectId },
+                        {
+                            $set: {
+                                productName: product.name,
+                                productImage: product.image,
+                                sellerEmail: product.sellerEmail,
+                                status: status,
+                                message: message,
+                                createdAt: new Date(),
+                                read: false
+                            },
+
+                        },
+                        { upsert: true }
+                    );
+
+                    res.send({
+                        message: "Product status updated and notification handled successfully",
+                        modifiedCount: updateResult.modifiedCount
+                    });
                 }
-            );
-
-            if (updateResult.matchedCount === 0) {
-                return res.status(404).send({ message: "Product not found" });
+                else{
+                    return res.status(403).send({message:"you are not admin"})
+                }
             }
 
 
-            const product = await productscollection.findOne({ _id: objectId });
 
-
-            let message = "";
-
-            if (status === "approved") {
-                message = "Admin approved your product successfully.";
-            } else if (status === "rejected") {
-                message = "Admin rejected your product.";
-            } else {
-                message = `Product status updated to ${status}`;
-            }
-
-
-            await notificationcollection.updateOne(
-                { productId: objectId },
-                {
-                    $set: {
-                        productName: product.name,
-                        productImage: product.image,
-                        sellerEmail: product.sellerEmail,
-                        status: status,
-                        message: message,
-                        createdAt: new Date(),
-                        read: false
-                    },
-
-                },
-                { upsert: true }
-            );
-
-            res.send({
-                message: "Product status updated and notification handled successfully",
-                modifiedCount: updateResult.modifiedCount
-            });
 
         } catch (err) {
             console.log(err);

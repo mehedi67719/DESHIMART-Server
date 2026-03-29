@@ -1,12 +1,13 @@
 const express = require('express');
 const { ObjectId } = require('mongodb');
+const verifyToken = require('./middleware/verifyToken');
 const router = express.Router();
 
 
 
 module.exports = (cartcollection, favoritecollection) => {
 
-    router.post("/from-favorite", async (req, res) => {
+    router.post("/from-favorite",verifyToken, async (req, res) => {
         const cartdata = req.body
 
         try {
@@ -21,7 +22,7 @@ module.exports = (cartcollection, favoritecollection) => {
 
 
 
-    router.post("/", async (req, res) => {
+    router.post("/",verifyToken, async (req, res) => {
         const cartdata = req.body
 
         try {
@@ -35,21 +36,8 @@ module.exports = (cartcollection, favoritecollection) => {
     })
 
 
-    router.get("/:email", async (req, res) => {
-        try {
-            const email = req.params.email;
-            const result = await cartcollection.find({ userEmail: email }).toArray();
-            res.send(result)
-        }
-        catch (err) {
-            console.log(err)
-            res.status(500).send({ message: "server error" })
-        }
-    })
 
-
-
-    router.get("/cart-count/:email", async (req, res) => {
+    router.get("/cart-count/:email",verifyToken, async (req, res) => {
         try {
             const email = req.params.email;
 
@@ -69,9 +57,25 @@ module.exports = (cartcollection, favoritecollection) => {
         }
     });
 
+    router.get("/:email",verifyToken, async (req, res) => {
+        try {
+            const email = req.params.email;
+            const result = await cartcollection.find({ userEmail: email }).toArray();
+            res.send(result)
+        }
+        catch (err) {
+            console.log(err)
+            res.status(500).send({ message: "server error" })
+        }
+    })
 
 
-    router.delete("/:id", async (req, res) => {
+
+
+
+
+
+    router.delete("/:id",verifyToken, async (req, res) => {
         try {
             const id = req.params.id;
             const result = await cartcollection.deleteOne({ _id: new ObjectId(id) })

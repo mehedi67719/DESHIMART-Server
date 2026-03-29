@@ -1,15 +1,37 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const verifyToken = require("./middleware/verifyToken");
 const router = express.Router();
 
 
 module.exports = (usercollection, notificationcollection) => {
 
 
-    router.get('/all-users', async (req, res) => {
+    router.get('/all-users', verifyToken, async (req, res) => {
         try {
-            const result = await usercollection.find().toArray();
-            res.send(result)
+
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
+            }
+            else {
+                if (finduser.role == "admin") {
+                    const result = await usercollection.find().toArray();
+                    res.send(result)
+                }
+                else {
+                    return res.status(403).send({ message: "you are not admin" })
+                }
+            }
+
+
+
+
         }
         catch (err) {
             console.log(err)
@@ -19,37 +41,57 @@ module.exports = (usercollection, notificationcollection) => {
 
 
 
-    router.get('/all-users-summary', async (req, res) => {
+    router.get('/all-users-summary', verifyToken, async (req, res) => {
         try {
-            const users = await usercollection.find().toArray();
 
-            const monthlySummary = {};
-            users.forEach(user => {
-                if (!user.createdAt) return;
+            const useremail = req.decoded_email;
 
-                const month = new Date(user.createdAt).toISOString().slice(0, 7);
+            const finduser = await usercollection.findOne({ email: useremail });
 
-                if (!monthlySummary[month]) {
-                    monthlySummary[month] = {
-                        totalUsers: 0,
-                        totalBuyers: 0,
-                        totalSellers: 0
-                    };
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
+            }
+            else {
+                if (finduser.role == 'admin') {
+                    const users = await usercollection.find().toArray();
+
+                    const monthlySummary = {};
+                    users.forEach(user => {
+                        if (!user.createdAt) return;
+
+                        const month = new Date(user.createdAt).toISOString().slice(0, 7);
+
+                        if (!monthlySummary[month]) {
+                            monthlySummary[month] = {
+                                totalUsers: 0,
+                                totalBuyers: 0,
+                                totalSellers: 0
+                            };
+                        }
+
+                        monthlySummary[month].totalUsers += 1;
+                        if (user.role === "buyer") {
+                            monthlySummary[month].totalBuyers += 1;
+                        }
+
+                        if (user.role === "admin" || user.role === "seller") {
+                            monthlySummary[month].totalSellers += 1;
+                        }
+                    });
+
+                    res.send({
+                        monthlySummary
+                    });
                 }
 
-                monthlySummary[month].totalUsers += 1;
-                if (user.role === "buyer") {
-                    monthlySummary[month].totalBuyers += 1;
+                else {
+                    return res.status(403).send({ message: "you are not admin" })
                 }
+            }
 
-                if (user.role === "admin" || user.role === "seller") {
-                    monthlySummary[month].totalSellers += 1;
-                }
-            });
 
-            res.send({
-                monthlySummary
-            });
 
         } catch (err) {
             console.log(err);
@@ -59,7 +101,7 @@ module.exports = (usercollection, notificationcollection) => {
 
 
 
-    router.post("/", async (req, res) => {
+    router.post("/",verifyToken, async (req, res) => {
         try {
             const user = req.body;
             // console.log(user)
@@ -72,7 +114,8 @@ module.exports = (usercollection, notificationcollection) => {
                 });
             }
 
-            const result = await usercollection.insertOne(user)
+            const result = await usercollection.insertOne(user);
+            res.send(result);
         }
         catch (error) {
             console.error("Error creating user:", error);
@@ -82,53 +125,75 @@ module.exports = (usercollection, notificationcollection) => {
 
 
 
-    router.patch("/update-role", async (req, res) => {
+    router.patch("/update-role", verifyToken, async (req, res) => {
         try {
             const { email, role } = req.body;
 
-            if (!email || !role) {
-                return res.status(400).send({ message: "Email and role are required" });
+
+
+            const useremail = req.decoded_email;
+
+            const finduser = await usercollection.findOne({ email: useremail });
+
+
+
+            if (!finduser) {
+                return res.status(404).send({ message: "user not found" })
             }
+            else {
+                if (finduser.role == "admin") {
 
-            const user = await usercollection.findOne({ email: email });
-
-            if (!user) {
-                return res.status(404).send({ message: "User not found" });
-            }
-
-            const oldRole = user.role;
-
-         
-            await usercollection.updateOne(
-                { email: email },
-                {
-                    $set: {
-                        role: role,
-                        updatedAt: new Date()
+                    if (!email || !role) {
+                        return res.status(400).send({ message: "Email and role are required" });
                     }
+
+                    const user = await usercollection.findOne({ email: email });
+
+                    if (!user) {
+                        return res.status(404).send({ message: "User not found" });
+                    }
+
+                    const oldRole = user.role;
+
+
+                    await usercollection.updateOne(
+                        { email: email },
+                        {
+                            $set: {
+                                role: role,
+                                updatedAt: new Date()
+                            }
+                        }
+                    );
+
+                    const message = `changed your role from "${oldRole}" to "${role}".`;
+                    await notificationcollection.updateOne(
+                        { email: email, type: "role-update" },
+                        {
+                            $set: {
+                                email: email,
+                                role: role,
+                                message: message,
+                                type: "role-update",
+                                read: false,
+                                createdAt: new Date()
+                            },
+
+                        },
+                        { upsert: true }
+                    );
+
+                    res.send({
+                        message: "User role updated and notification handled successfully"
+                    });
                 }
-            );
+                else {
+                    res.status(403).send({
+                        message: 'you are not admin'
+                    })
+                }
+            }
 
-            const message = `changed your role from "${oldRole}" to "${role}".`;
-            await notificationcollection.updateOne(
-                { email: email, type: "role-update" },
-                {
-                    $set: {
-                        email: email,
-                        role: role,
-                        message: message,
-                        type: "role-update",
-                        read: false,
-                        createdAt: new Date()
-                    },
-                    
-                },
-                { upsert: true }
-            );
-
-            res.send({
-                message: "User role updated and notification handled successfully"
-            });
 
         } catch (error) {
             console.error(error);
@@ -136,10 +201,10 @@ module.exports = (usercollection, notificationcollection) => {
         }
     });
 
-    
 
 
-    router.get("/pending-user", async (req, res) => {
+
+    router.get("/pending-user",verifyToken, async (req, res) => {
         try {
             const result = await usercollection.find({ role: "requested-seller" }).toArray();
             res.send(result)
@@ -152,7 +217,7 @@ module.exports = (usercollection, notificationcollection) => {
 
 
 
-    router.get("/", async (req, res) => {
+    router.get("/",verifyToken, async (req, res) => {
         try {
             const email = req.query.email;
             const result = await usercollection.findOne({ email: email });
